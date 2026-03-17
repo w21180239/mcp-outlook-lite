@@ -4,6 +4,16 @@ import { handleLargeContent, saveBase64File } from '../../utils/fileOutput.js';
 import { safeStringify, createSafeResponse } from '../../utils/jsonUtils.js';
 import { decodeContent as decodeFileContent, formatFileSize } from '../common/fileTypeUtils.js';
 
+function applyDecodedContent(target, decodedContent) {
+  target.content = decodedContent.content;
+  target.decodedContentType = decodedContent.type;
+  target.encoding = decodedContent.encoding;
+  target.contentIncluded = true;
+  if (decodedContent.contentBytes) target.contentBytes = decodedContent.contentBytes;
+  if (decodedContent.note) target.note = decodedContent.note;
+  if (decodedContent.error) target.decodingError = decodedContent.error;
+}
+
 // Download attachment
 export async function downloadAttachmentTool(authManager, args) {
   const { messageId, attachmentId, includeContent = false, decodeContent = true } = args;
@@ -60,26 +70,8 @@ export async function downloadAttachmentTool(authManager, args) {
                 attachment.name
               );
               
-              // Add decoded content info
-              attachmentInfo.content = decodedContent.content;
-              attachmentInfo.decodedContentType = decodedContent.type;
-              attachmentInfo.encoding = decodedContent.encoding;
-              attachmentInfo.contentIncluded = true;
-              
-              // Keep raw Base64 for binary files or when needed
-              if (decodedContent.contentBytes) {
-                attachmentInfo.contentBytes = decodedContent.contentBytes;
-              }
-              
-              // Add any additional info
-              if (decodedContent.note) {
-                attachmentInfo.note = decodedContent.note;
-              }
-              
-              if (decodedContent.error) {
-                attachmentInfo.decodingError = decodedContent.error;
-              }
-              
+              applyDecodedContent(attachmentInfo, decodedContent);
+
               debug(`Debug: Successfully downloaded and decoded content (type: ${decodedContent.type}, size: ${decodedContent.size} bytes)`);
             } else {
               // Return raw Base64 content
@@ -138,18 +130,7 @@ export async function downloadAttachmentTool(authManager, args) {
                 attachment.name
               );
               
-              attachmentInfo.content = decodedContent.content;
-              attachmentInfo.decodedContentType = decodedContent.type;
-              attachmentInfo.encoding = decodedContent.encoding;
-              attachmentInfo.contentIncluded = true;
-              
-              if (decodedContent.contentBytes) {
-                attachmentInfo.contentBytes = decodedContent.contentBytes;
-              }
-              
-              if (decodedContent.note) {
-                attachmentInfo.note = decodedContent.note;
-              }
+              applyDecodedContent(attachmentInfo, decodedContent);
             } else {
               // Return raw Base64 content
               attachmentInfo.contentBytes = fullAttachment.contentBytes;

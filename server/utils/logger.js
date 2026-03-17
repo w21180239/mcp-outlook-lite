@@ -3,3 +3,7 @@ export function debug(...args) {
     console.error(...args);
   }
 }
+
+export function warn(...args) {
+  console.error('[WARN]', ...args);
+}

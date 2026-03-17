@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer';
-import { debug } from '../../utils/logger.js';
+import { debug, warn } from '../../utils/logger.js';
 import { parseExcelContent } from './excelParser.js';
 import { parseOfficeDocument } from './documentParser.js';
 export { parseExcelContent } from './excelParser.js';
@@ -189,6 +189,16 @@ export async function decodeContent(contentBytes, contentType, filename, maxText
     } else if (isExcelFile(contentType, filename)) {
       debug(`Debug: Detected Excel file, attempting to parse`);
       const excelData = parseExcelContent(contentBytes, filename);
+      if (excelData.type === 'excel_error') {
+        warn(`Excel parse failed for ${filename}: ${excelData.error}`);
+        return {
+          type: 'error',
+          content: `[Excel parse failed: ${excelData.error}]`,
+          contentBytes,
+          encoding: 'base64_fallback',
+          error: excelData.error
+        };
+      }
       return {
         type: 'excel',
         content: excelData,
@@ -201,6 +211,16 @@ export async function decodeContent(contentBytes, contentType, filename, maxText
     } else if (isOfficeDocument(contentType, filename)) {
       debug(`Debug: Detected office document, attempting to parse`);
       const officeData = await parseOfficeDocument(contentBytes, filename);
+      if (officeData.type === 'office_error') {
+        warn(`Office document parse failed for ${filename}: ${officeData.error}`);
+        return {
+          type: 'error',
+          content: `[Office parse failed: ${officeData.error}]`,
+          contentBytes,
+          encoding: 'base64_fallback',
+          error: officeData.error
+        };
+      }
       return {
         type: 'office',
         content: officeData,

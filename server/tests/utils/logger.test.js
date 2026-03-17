@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { debug } from '../../utils/logger.js';
+import { debug, warn } from '../../utils/logger.js';
 
 describe('debug logger', () => {
   let consoleSpy;
@@ -29,5 +29,29 @@ describe('debug logger', () => {
     process.env.DEBUG = '1';
     debug('msg', 42, { key: 'val' });
     expect(consoleSpy).toHaveBeenCalledWith('msg', 42, { key: 'val' });
+  });
+});
+
+describe('warn logger', () => {
+  let consoleSpy;
+
+  beforeEach(() => {
+    consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleSpy.mockRestore();
+    delete process.env.DEBUG;
+  });
+
+  it('should always log regardless of DEBUG', () => {
+    delete process.env.DEBUG;
+    warn('warning message');
+    expect(consoleSpy).toHaveBeenCalledWith('[WARN]', 'warning message');
+  });
+
+  it('should pass multiple arguments with [WARN] prefix', () => {
+    warn('msg', 42);
+    expect(consoleSpy).toHaveBeenCalledWith('[WARN]', 'msg', 42);
   });
 });

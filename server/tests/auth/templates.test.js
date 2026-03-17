@@ -19,9 +19,9 @@ describe('auth templates', () => {
       expect(html).toContain('window.close');
     });
 
-    it('should contain checkmark icon', () => {
+    it('should contain icon', () => {
       const html = getSuccessPage();
-      expect(html).toContain('checkmark');
+      expect(html).toContain('class="icon"');
     });
   });
 

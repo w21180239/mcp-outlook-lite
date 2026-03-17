@@ -1,24 +1,27 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 
 export function openBrowser(url) {
   const platform = process.platform;
-  let command;
+  let cmd, args;
 
   switch (platform) {
     case 'darwin':
-      command = `open "${url}"`;
+      cmd = 'open';
+      args = [url];
       break;
     case 'win32':
-      command = `start "" "${url}"`;
+      cmd = 'cmd';
+      args = ['/c', 'start', '', url];
       break;
     default:
-      command = `xdg-open "${url}"`;
+      cmd = 'xdg-open';
+      args = [url];
       break;
   }
 
-  exec(command, (error) => {
+  execFile(cmd, args, (error) => {
     if (error) {
-      // Silent fail - URL is already displayed above
+      console.error(`Warning: Could not open browser automatically (${error.message}). Please visit the URL shown above manually.`);
     }
   });
 }

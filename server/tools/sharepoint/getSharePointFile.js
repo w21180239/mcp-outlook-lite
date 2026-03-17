@@ -11,6 +11,18 @@ import { handleLargeContent, saveBase64File } from '../../utils/fileOutput.js';
 import { safeStringify, createSafeResponse } from '../../utils/jsonUtils.js';
 import { decodeContent } from '../common/fileTypeUtils.js';
 
+function applyDecodedContent(target, decodedContent, contentType) {
+  target.content = decodedContent.content;
+  target.decodedContentType = decodedContent.type;
+  target.encoding = decodedContent.encoding;
+  target.contentType = contentType;
+  target.contentSize = decodedContent.size;
+  target.sizeFormatted = decodedContent.sizeFormatted;
+  if (decodedContent.contentBytes) target.contentBytes = decodedContent.contentBytes;
+  if (decodedContent.note) target.note = decodedContent.note;
+  if (decodedContent.error) target.decodingError = decodedContent.error;
+}
+
 /**
  * Enhanced SharePoint URL parser with comprehensive pattern matching
  * @param {string} sharePointUrl - The SharePoint URL from the email
@@ -293,29 +305,10 @@ async function getFileFromDrive(graphClient, driveId, itemId, downloadContent = 
             // Decode content intelligently based on type
             const decodedContent = await decodeContent(contentBytes, contentType, fileInfo.name);
 
-            // Add decoded content info
-            result.content = decodedContent.content;
-            result.decodedContentType = decodedContent.type;
-            result.encoding = decodedContent.encoding;
-            result.contentType = contentType;
-            result.contentSize = decodedContent.size;
-            result.sizeFormatted = decodedContent.sizeFormatted;
-
-            // Keep raw Base64 for binary files or when needed
-            if (decodedContent.contentBytes) {
-              result.contentBytes = decodedContent.contentBytes;
-            }
-
-            // Add any additional info
-            if (decodedContent.note) {
-              result.note = decodedContent.note;
-            }
-
-            if (decodedContent.error) {
-              result.decodingError = decodedContent.error;
-            }
+            applyDecodedContent(result, decodedContent, contentType);
           }
         } catch (downloadError) {
+          debug(`Debug: Content download failed for item ${itemId}: ${downloadError.message}`);
           result.contentError = `Failed to download content: ${downloadError.message}`;
         }
       }
@@ -403,27 +396,7 @@ export async function getSharePointFileTool(authManager, args) {
                     // Decode content intelligently based on type
                     const decodedContent = await decodeContent(contentBytes, contentType, fileResult.name);
 
-                    // Add decoded content info
-                    fileResult.content = decodedContent.content;
-                    fileResult.decodedContentType = decodedContent.type;
-                    fileResult.encoding = decodedContent.encoding;
-                    fileResult.contentType = contentType;
-                    fileResult.contentSize = decodedContent.size;
-                    fileResult.sizeFormatted = decodedContent.sizeFormatted;
-
-                    // Keep raw Base64 for binary files or when needed
-                    if (decodedContent.contentBytes) {
-                      fileResult.contentBytes = decodedContent.contentBytes;
-                    }
-
-                    // Add any additional info
-                    if (decodedContent.note) {
-                      fileResult.note = decodedContent.note;
-                    }
-
-                    if (decodedContent.error) {
-                      fileResult.decodingError = decodedContent.error;
-                    }
+                    applyDecodedContent(fileResult, decodedContent, contentType);
 
                     debug(`Debug: Successfully downloaded and decoded content (type: ${decodedContent.type}, size: ${decodedContent.size} bytes)`);
                   } else {
@@ -589,10 +562,12 @@ export async function resolveSharePointLinkTool(authManager, args) {
     // Add permissions info if requested
     if (args.includePermissions) {
       try {
-        const permissions = await graphApiClient.makeRequest(`/drives/items/${fileInfo.id}/permissions`);
+        const driveId = fileInfo.parentReference?.driveId;
+        if (!driveId) throw new Error('driveId not available');
+        const permissions = await graphApiClient.makeRequest(`/drives/${driveId}/items/${fileInfo.id}/permissions`);
         result.sharing.permissions = permissions.value || [];
       } catch (permError) {
-        result.sharing.permissionsError = 'Could not retrieve permissions information';
+        result.sharing.permissionsError = `Could not retrieve permissions: ${permError.message}`;
       }
     }
 

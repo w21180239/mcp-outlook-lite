@@ -41,7 +41,7 @@ export function parseExcelContent(contentBytes, filename, maxSheets = 10, maxRow
       // Convert to JSON with limited rows
       const jsonData = XLSX.utils.sheet_to_json(worksheet, {
         header: 1, // Use array format instead of object
-        range: rowsToProcess < totalRows ? `${worksheet['!ref'].split(':')[0]}:${XLSX.utils.encode_cell({r: range.s.r + rowsToProcess - 1, c: range.e.c})}` : undefined
+        range: rowsToProcess < totalRows ? `${(worksheet['!ref'] || 'A1:A1').split(':')[0]}:${XLSX.utils.encode_cell({r: range.s.r + rowsToProcess - 1, c: range.e.c})}` : undefined
       });
 
       const sheetInfo = {
