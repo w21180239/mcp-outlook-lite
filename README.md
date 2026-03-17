@@ -1,6 +1,6 @@
-# mcp-outlook
+# mcp-outlook-lite
 
-A production-grade [Model Context Protocol](https://modelcontextprotocol.io) server that connects AI agents to Microsoft Outlook — email, calendar, attachments, SharePoint, and inbox rules — via the Microsoft Graph API.
+The lightest way to connect AI agents to Microsoft Outlook. No client secret. No complex OAuth. Just a Client ID and you're done.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-769%20passing-brightgreen)]()
@@ -8,95 +8,71 @@ A production-grade [Model Context Protocol](https://modelcontextprotocol.io) ser
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D18-blue)]()
 
-## What it does
+> **Tired of getting stuck on Outlook MCP auth?** Most Outlook MCP servers require client secrets, complex permission grants, and multi-step OAuth configurations that break silently. This one uses **PKCE** — the browser handles login, no secrets stored anywhere. If you can create an Azure app registration, you can use this.
 
-Give any MCP-compatible AI agent (Claude, GPT, Gemini, etc.) the ability to read, send, and manage Outlook email; check and create calendar events; download and parse attachments; access SharePoint files; and manage inbox rules — all through natural language.
+---
 
-**46 tools** across 6 categories:
+## Why this one?
 
-| Category | Count | Highlights |
-|----------|-------|------------|
-| **Email** | 15 | List, search, send, reply, forward, draft, move, flag, categorize, batch operations |
-| **Calendar** | 17 | Events, recurring meetings, availability, online meetings, timezone handling |
-| **Attachments** | 4 | List, download with auto-parsing (PDF/Word/Excel/PowerPoint), upload, scan |
-| **Folders** | 4 | List, create, rename, stats |
-| **SharePoint** | 3 | Access files via sharing links or direct IDs, resolve links |
-| **Rules** | 3 | List, create, delete server-side inbox rules |
+| | mcp-outlook-lite | Other Outlook MCPs |
+|---|---|---|
+| **Auth setup** | Client ID only, zero secrets | Client ID + Client Secret + certificates |
+| **Auth flow** | PKCE (browser popup) + device code (headless) | Complex OAuth requiring manual token management |
+| **First-time experience** | Register app > paste ID > done | Register app > create secret > configure redirect > manage tokens > debug errors |
+| **Token management** | Auto-refresh, encrypted at rest, zero maintenance | Often manual refresh or re-auth required |
+| **Token efficiency** | Focused tool schemas, minimal response payloads | Verbose responses eating your context window |
+| **Headless support** | Auto-detects SSH/containers, prints device code | Browser-only or manual token injection |
 
-## Quick start
+**The auth problem is real.** If you've tried other Outlook MCPs and got stuck after creating the Azure app — authorization failures, redirect URI mismatches, token exchange errors — that's because they use flows designed for server apps. PKCE is designed for exactly this use case: local tools that can't store secrets.
 
-### 1. Register an Azure app (one-time, 5 minutes)
+---
 
-1. Go to [Azure Portal → App registrations](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) → **New registration**
-2. Name it anything (e.g., `MCP Outlook`), pick your account type:
-   - **Work/school**: "Accounts in this organizational directory only"
-   - **Personal** (outlook.com): "Accounts in any organizational directory and personal Microsoft accounts"
-3. Redirect URI: select **Web**, enter `http://localhost/callback`
-4. After registration, go to **Authentication** → enable **Allow public client flows** → Save
-5. Go to **API permissions** → Add **Microsoft Graph** → **Delegated permissions**:
+## 3-step setup
+
+### Step 1: Register an Azure app (5 min, one-time)
+
+1. [Azure Portal > App registrations](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) > **New registration**
+2. Name: anything (e.g. `Outlook MCP`). Account type:
+   - Work/school: *"Accounts in this organizational directory only"*
+   - Personal: *"Accounts in any org directory and personal Microsoft accounts"*
+3. Redirect URI: **Web** > `http://localhost/callback`
+4. **Authentication** > enable **Allow public client flows** > Save
+5. **API permissions** > Add **Microsoft Graph** delegated permissions:
    ```
-   Mail.Read  Mail.ReadWrite  Mail.Send
-   Calendars.Read  Calendars.ReadWrite
-   User.Read  MailboxSettings.Read
-   Files.Read.All  Sites.Read.All
-   offline_access
+   Mail.Read  Mail.ReadWrite  Mail.Send  Calendars.Read  Calendars.ReadWrite
+   User.Read  MailboxSettings.Read  Files.Read.All  Sites.Read.All  offline_access
    ```
-6. Copy your **Application (client) ID** and **Directory (tenant) ID** from the Overview page
+6. Copy **Application (client) ID** and **Directory (tenant) ID** from the Overview page
 
-> No client secret needed — this uses OAuth 2.0 with PKCE (see [How authentication works](#how-authentication-works)).
+> That's it. No client secret. No certificates. No admin consent (for personal accounts).
 
-### 2. Install and configure
+### Step 2: Install
 
-**Option A: npm (recommended)**
 ```bash
-npm install -g mcp-outlook
+npx mcp-outlook-lite
 ```
 
-**Option B: Clone from source**
-```bash
-git clone https://github.com/w21180239/mcp-outlook.git
-cd mcp-outlook
-npm install && npm run build
-```
-
-Then add the server to your AI tool's MCP configuration:
+Or add to your MCP client config:
 
 <details>
 <summary><b>Claude Code</b></summary>
 
 ```bash
-claude mcp add outlook -- npx mcp-outlook \
+claude mcp add outlook -- npx mcp-outlook-lite \
   --env AZURE_CLIENT_ID=your-client-id \
   --env AZURE_TENANT_ID=your-tenant-id
-```
-
-Or add to `~/.claude.json`:
-```json
-{
-  "mcpServers": {
-    "outlook": {
-      "command": "node",
-      "args": ["/absolute/path/to/mcp-outlook/dist/index.js"],
-      "env": {
-        "AZURE_CLIENT_ID": "your-client-id",
-        "AZURE_TENANT_ID": "your-tenant-id"
-      }
-    }
-  }
-}
 ```
 </details>
 
 <details>
 <summary><b>Claude Desktop</b></summary>
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 ```json
 {
   "mcpServers": {
     "outlook": {
-      "command": "node",
-      "args": ["/absolute/path/to/mcp-outlook/dist/index.js"],
+      "command": "npx",
+      "args": ["mcp-outlook-lite"],
       "env": {
         "AZURE_CLIENT_ID": "your-client-id",
         "AZURE_TENANT_ID": "your-tenant-id"
@@ -108,15 +84,14 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 </details>
 
 <details>
-<summary><b>Cursor</b></summary>
+<summary><b>Cursor / Windsurf / Other MCP clients</b></summary>
 
-Add to `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally:
 ```json
 {
   "mcpServers": {
     "outlook": {
-      "command": "node",
-      "args": ["/absolute/path/to/mcp-outlook/dist/index.js"],
+      "command": "npx",
+      "args": ["mcp-outlook-lite"],
       "env": {
         "AZURE_CLIENT_ID": "your-client-id",
         "AZURE_TENANT_ID": "your-tenant-id"
@@ -127,207 +102,113 @@ Add to `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally:
 ```
 </details>
 
-<details>
-<summary><b>Windsurf / Other MCP clients</b></summary>
+### Step 3: Use it
 
-The server speaks standard MCP over stdio. Point your client at:
-```
-command: node
-args: ["/absolute/path/to/mcp-outlook/dist/index.js"]
-env: AZURE_CLIENT_ID=..., AZURE_TENANT_ID=...
-```
-</details>
+The first tool call triggers auth automatically:
+- **Desktop**: browser opens for Microsoft login
+- **SSH / container**: device code printed to stderr — follow the link
 
-### 3. Authenticate
-
-The first time any tool is called, authentication begins automatically:
-- **Desktop/local**: a browser window opens for Microsoft login
-- **Headless/SSH/container**: device code flow — follow the instructions printed to stderr
-
-After that, tokens are cached and refreshed automatically — no re-login needed between sessions.
-
-> Set `MCP_OUTLOOK_DEVICE_CODE=1` to force device code flow even when a browser is available.
+After that, tokens refresh silently. No re-login between sessions.
 
 ---
 
-## How authentication works
+## 46 tools, 6 categories
 
-This server uses **OAuth 2.0 Authorization Code flow with PKCE** (Proof Key for Code Exchange), the recommended pattern for public clients (desktop/CLI apps) that cannot securely store a client secret.
+| Category | Count | Highlights |
+|----------|-------|------------|
+| **Email** | 15 | List, search, send, reply, forward, draft, move, flag, categorize, batch |
+| **Calendar** | 17 | Events, recurring meetings, availability, online meetings, timezone handling |
+| **Attachments** | 4 | List, download with auto-parsing (PDF/Word/Excel/PPT), upload, scan |
+| **Folders** | 4 | List, create, rename, stats |
+| **SharePoint** | 3 | Access files via sharing links or direct IDs |
+| **Rules** | 3 | List, create, delete server-side inbox rules |
+
+### Example prompts
+
+```
+"Show me unread emails from this week"
+"Find all emails from Alice about the budget"
+"Reply to that email thanking her for the update"
+"What meetings do I have tomorrow?"
+"Schedule a 30-min call with Bob next Tuesday at 2pm"
+"Download and summarize the PDF from the latest Finance email"
+```
+
+---
+
+## How PKCE auth works
 
 ```
 Agent calls a tool
-       │
-       ▼
-┌─ ensureAuthenticated() ─────────────────────────────┐
-│  Token cached & valid?  ──yes──▶  Use cached token   │
-│        │ no                                          │
-│  Refresh token works?   ──yes──▶  Silent refresh     │
-│        │ no                                          │
-│  Start PKCE flow:                                    │
-│    1. Generate random code_verifier + code_challenge  │
-│    2. Open browser → Microsoft login page             │
-│    3. User authenticates, Azure redirects to          │
-│       localhost:{random_port}/callback with auth code  │
-│    4. Exchange code + code_verifier for tokens         │
-│    5. Store tokens encrypted on disk                  │
-└──────────────────────────────────────────────────────┘
+       |
+       v
+  Token cached?  ---yes--->  Use it
+       | no
+  Refresh works? ---yes--->  Silent refresh (no browser)
+       | no
+  PKCE flow:
+    1. Generate code_verifier + code_challenge
+    2. Browser opens -> Microsoft login
+    3. Redirect to localhost with auth code
+    4. Exchange code + verifier for tokens
+    5. Encrypt and store tokens locally
 ```
 
-**Key properties:**
-- **No client secret** — the PKCE challenge/verifier pair proves the caller is the same entity that started the flow
-- **Tokens encrypted at rest** — AES-256 encryption using OS keychain (via `keytar`) or a random persistent key
-- **Scoped to `/me/`** — all Graph API calls are scoped to the authenticated user's own mailbox, calendar, and files
-- **Automatic refresh** — expired tokens are silently refreshed using the stored refresh token; browser re-login only happens when the refresh token itself expires
-
----
-
-## Example prompts
-
-Once connected, just talk to your agent naturally:
-
-**Email**
-- "Show me unread emails from this week"
-- "Find all emails from Alice about the budget"
-- "Reply to that email thanking her for the update"
-- "Draft an email to the team with meeting notes"
-
-**Calendar**
-- "What meetings do I have tomorrow?"
-- "Schedule a 30-min call with Bob next Tuesday at 2pm"
-- "Am I free on Friday afternoon?"
-
-**Attachments**
-- "Download and summarize the PDF from the latest Finance email"
-- "What's in the Excel file attached to that report?"
-
-**SharePoint**
-- "Get the contents of this SharePoint link: [paste]"
-
-**Rules**
-- "Show my inbox rules"
-- "Create a rule to move emails from noreply@example.com to the Archive folder"
+**No client secret anywhere in this flow.** The PKCE challenge/verifier pair cryptographically proves the caller's identity. Tokens are encrypted at rest using the OS keychain or AES-256 with a random key.
 
 ---
 
 ## Configuration
 
-| Environment variable | Required | Description |
-|---------------------|----------|-------------|
-| `AZURE_CLIENT_ID` | Yes | Azure AD application client ID |
-| `AZURE_TENANT_ID` | Yes | Azure AD directory (tenant) ID |
-| `MCP_OUTLOOK_WORK_DIR` | No | Directory for saving large files (defaults to system temp) |
-| `MCP_OUTLOOK_DEVICE_CODE` | No | Set to `1` to force device code auth flow (for headless environments) |
-| `DEBUG` | No | Set to any value to enable debug logging on stderr |
-
----
-
-## For agent builders
-
-### Claude Code skill
-
-If you use Claude Code and want Outlook tools always available, create a skill file:
-
-```markdown
-# ~/.claude/skills/outlook/SKILL.md
----
-name: outlook
-description: Use when the user wants to read/send emails, check calendar, download attachments, or manage inbox rules via Outlook
----
-
-The user has an Outlook MCP server configured. Use the `outlook_*` tools to interact with their Outlook account. Available tool categories:
-
-- Email: outlook_list_emails, outlook_search_emails, outlook_send_email, outlook_reply_to_email, outlook_create_draft, etc.
-- Calendar: outlook_list_events, outlook_create_event, outlook_check_availability, etc.
-- Attachments: outlook_list_attachments, outlook_download_attachment
-- Folders: outlook_list_folders, outlook_create_folder
-- SharePoint: outlook_get_sharepoint_file, outlook_list_sharepoint_files
-- Rules: outlook_list_rules, outlook_create_rule, outlook_delete_rule
-
-Always call outlook_list_emails or outlook_search_emails before trying to operate on specific messages.
-```
-
-### AGENTS.md / system prompt guidance
-
-If building an agent that uses this server, add to your system prompt:
-
-```
-You have access to Outlook via MCP tools prefixed with `outlook_`.
-- Always search/list before operating on specific items (you need message IDs).
-- Email send/reply is a high-stakes action — confirm with the user before sending.
-- Attachment downloads may return parsed text content (PDF, Word, Excel) directly.
-- Use outlook_search_emails for targeted queries; outlook_list_emails for browsing.
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AZURE_CLIENT_ID` | Yes | Application (client) ID from Azure |
+| `AZURE_TENANT_ID` | Yes | Directory (tenant) ID from Azure |
+| `MCP_OUTLOOK_DEVICE_CODE` | No | Set to `1` to force device code flow |
+| `MCP_OUTLOOK_WORK_DIR` | No | Directory for large file downloads |
+| `DEBUG` | No | Enable debug logging on stderr |
 
 ---
 
 ## Development
 
-### Project structure
-
-```
-mcp-outlook/
-├── server/                    # TypeScript source
-│   ├── index.ts               # MCP server entry point
-│   ├── types.ts               # Shared TypeScript interfaces
-│   ├── auth/                  # OAuth 2.0 PKCE + device code authentication
-│   │   ├── auth.ts            # Core auth manager
-│   │   ├── deviceCodeFlow.ts  # Headless device code flow
-│   │   ├── tokenManager.ts    # Encrypted token persistence
-│   │   └── config.ts          # OAuth configuration
-│   ├── graph/                 # Microsoft Graph API client
-│   ├── schemas/               # MCP tool schema definitions
-│   ├── tools/
-│   │   ├── dispatcher.ts      # Tool name → handler registry
-│   │   ├── common/            # Shared utilities (file parsing, logging)
-│   │   ├── email/             # Email tools
-│   │   ├── calendar/          # Calendar tools
-│   │   ├── attachments/       # Attachment tools
-│   │   ├── folders/           # Folder tools
-│   │   ├── sharepoint/        # SharePoint tools
-│   │   └── rules/             # Inbox rules tools
-│   ├── utils/                 # Error handling, validation, caching
-│   └── tests/                 # 769 tests (vitest)
-├── dist/                      # Compiled JavaScript output
-├── tsconfig.json
-├── package.json
-└── vitest.config.js
-```
-
-### Running tests
+**TypeScript** with `noImplicitAny`. 769 tests, 81% coverage.
 
 ```bash
-npm test                      # Run all 769 tests
-npm run test:watch            # Watch mode
-npm run typecheck             # TypeScript type checking
-npm run build                 # Compile to dist/
-npx vitest run --coverage     # With coverage report (~81%)
+npm test              # Run tests
+npm run typecheck     # Type check
+npm run build         # Compile to dist/
+npm run dev           # Dev mode with tsx
 ```
 
-### Architecture decisions
+<details>
+<summary>Project structure</summary>
 
-- **TypeScript** — strict mode with `noImplicitAny`, compiled to ES2022 ESM
-- **No client secret** — OAuth PKCE + device code flow, suitable for local/CLI/headless deployment
-- **Dispatcher pattern** — tool routing via typed registry map, not a switch statement
-- **Conditional logging** — debug output gated behind `DEBUG` env var; `warn` level always on
-- **769 tests, 81% coverage** — vitest with v8 coverage provider
+```
+server/
+  index.ts              # MCP server entry
+  types.ts              # Shared interfaces
+  auth/                 # PKCE + device code auth
+  graph/                # Microsoft Graph client with rate limiting
+  tools/                # 46 tool handlers
+  schemas/              # MCP tool schemas
+  utils/                # Validation, caching, error handling
+  tests/                # 769 tests
+```
+</details>
 
 ---
 
 ## Security
 
-- Tokens encrypted at rest (OS keychain or AES-256 with random key)
-- No sensitive data in MCP tool responses (OAuth errors sanitized, stack traces removed)
-- Email recipient validation before sending
-- All Graph API calls scoped to authenticated user (`/me/` prefix)
-- Debug logging gated behind `DEBUG` env var to prevent accidental data exposure
+- Tokens encrypted at rest (OS keychain or AES-256)
+- All Graph API calls scoped to `/me/` (your mailbox only)
+- No sensitive data in tool responses
+- Recipient validation before sending emails
 
-Report security issues via [GitHub private vulnerability reporting](https://github.com/w21180239/mcp-outlook/security). See [SECURITY.md](SECURITY.md) for details.
+Report vulnerabilities via [GitHub private reporting](https://github.com/w21180239/mcp-outlook-lite/security). See [SECURITY.md](SECURITY.md).
 
 ---
-
-## Acknowledgements
-
-This project was originally forked from [XenoXilus/outlook-mcp](https://github.com/XenoXilus/outlook-mcp). It has since been substantially rewritten with a modular architecture, comprehensive test suite, security hardening, and new features.
 
 ## License
 

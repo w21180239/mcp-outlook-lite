@@ -1,6 +1,6 @@
-# mcp-outlook — Agent Instructions
+# mcp-outlook-lite — Agent Instructions
 
-This is an MCP server that provides 46 Outlook tools via Microsoft Graph API.
+The lightest Outlook MCP server — zero secrets, PKCE auth, 46 tools via Microsoft Graph API.
 
 ## Architecture
 

@@ -235,7 +235,7 @@ export class HttpConnectionPool {
       headers: {
         'Connection': 'keep-alive',
         'Accept-Encoding': 'gzip, deflate, br',
-        'User-Agent': 'outlook-mcp-server/1.0.0'
+        'User-Agent': 'mcp-outlook-lite/2.0.0'
       }
     };
   }
@@ -252,7 +252,7 @@ export class HttpConnectionPool {
       headers: {
         'Connection': 'keep-alive',
         'Accept-Encoding': 'gzip, deflate, br',
-        'User-Agent': 'outlook-mcp-server/1.0.0'
+        'User-Agent': 'mcp-outlook-lite/2.0.0'
       }
     };
   }

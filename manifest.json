@@ -1,11 +1,10 @@
 {
   "dxt_version": "0.1",
-  "name": "outlook-mcp",
+  "name": "mcp-outlook-lite",
   "version": "2.0.0",
-  "description": "Connects your LLM to the Outlook setup. Read and write emails, contacts, and calendar events. ",
+  "description": "The lightest Outlook MCP server — zero secrets, PKCE auth, 46 tools for email, calendar, attachments, SharePoint, and rules",
   "author": {
-    "name": "XenoXilus",
-    "email": "xenoxilus@gmail.com"
+    "name": "w21180239"
   },
   "user_config": {
     "azure_client_id": {

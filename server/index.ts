@@ -41,7 +41,7 @@ process.on('uncaughtException', (error) => {
     }
 
     const server = new Server(
-      { name: 'outlook-mcp', version: '2.0.0' },
+      { name: 'mcp-outlook-lite', version: '2.0.0' },
       { capabilities: { tools: {}, prompts: {} } }
     );
 
@@ -53,7 +53,7 @@ process.on('uncaughtException', (error) => {
     server.setRequestHandler(InitializeRequestSchema, async () => ({
       protocolVersion: '2025-06-18',
       capabilities: { tools: {}, prompts: {} },
-      serverInfo: { name: 'outlook-mcp', version: '2.0.0' },
+      serverInfo: { name: 'mcp-outlook-lite', version: '2.0.0' },
     }));
 
     server.setNotificationHandler(InitializedNotificationSchema, async () => {
@@ -103,10 +103,10 @@ process.on('uncaughtException', (error) => {
       }
     });
 
-    console.error('Starting Outlook MCP Server...');
+    console.error('Starting mcp-outlook-lite...');
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error('Outlook MCP server is ready and connected');
+    console.error('mcp-outlook-lite is ready and connected');
 
   } catch (error) {
     console.error('Server error:', error);

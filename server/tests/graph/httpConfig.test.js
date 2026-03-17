@@ -76,7 +76,7 @@ describe('HttpConnectionPool', () => {
       expect(config.httpsAgent).toBe(pool.httpsAgent);
       expect(config.timeout).toBe(30000);
       expect(config.headers['Connection']).toBe('keep-alive');
-      expect(config.headers['User-Agent']).toBe('outlook-mcp-server/1.0.0');
+      expect(config.headers['User-Agent']).toBe('mcp-outlook-lite/2.0.0');
     });
 
     it('should return config with httpAgent for http base URL', () => {
