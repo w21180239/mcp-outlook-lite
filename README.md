@@ -1,292 +1,316 @@
-# Microsoft Outlook MCP Server
+# mcp-outlook
 
-> **Fork notice:** This is an actively maintained fork of [XenoXilus/outlook-mcp](https://github.com/XenoXilus/outlook-mcp). The original repo has been inactive since January 2025. This fork adds silent token refresh, inbox rules management, reply-thread drafts, and various bug fixes.
-
-An MCP server for Microsoft Outlook — email, calendar, and SharePoint — via the Microsoft Graph API.
+A production-grade [Model Context Protocol](https://modelcontextprotocol.io) server that connects AI agents to Microsoft Outlook — email, calendar, attachments, SharePoint, and inbox rules — via the Microsoft Graph API.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-262%20passing-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-61%25-yellow)]()
+[![Node](https://img.shields.io/badge/node-%3E%3D18-blue)]()
 
-## Features
+## What it does
 
-- **Email Operations**: Read, search, send, reply to emails and download attachments
-- **Inbox Rules**: Create and manage server-side inbox rules (auto-move, auto-categorize, etc.)
-- **Reply Thread Drafts**: Create drafts that preserve the conversation thread via `replyToMessageId`
-- **Silent Token Refresh**: Expired access tokens are refreshed automatically — no browser re-login between sessions
-- **SharePoint Integration**: Access SharePoint files via sharing links or direct file IDs
-- **Calendar Management**: View and manage calendar events and appointments
-- **Office Document Processing**: Parse PDF, Word, PowerPoint, and Excel files with extracted text content
-- **Large File Support**: Automatic handling of files that exceed MCP response size limits
+Give any MCP-compatible AI agent (Claude, GPT, Gemini, etc.) the ability to read, send, and manage Outlook email; check and create calendar events; download and parse attachments; access SharePoint files; and manage inbox rules — all through natural language.
 
-## Quick Start
+**46 tools** across 6 categories:
 
-**Choose your installation method:**
+| Category | Count | Highlights |
+|----------|-------|------------|
+| **Email** | 15 | List, search, send, reply, forward, draft, move, flag, categorize, batch operations |
+| **Calendar** | 17 | Events, recurring meetings, availability, online meetings, timezone handling |
+| **Attachments** | 4 | List, download with auto-parsing (PDF/Word/Excel/PowerPoint), upload, scan |
+| **Folders** | 4 | List, create, rename, stats |
+| **SharePoint** | 3 | Access files via sharing links or direct IDs, resolve links |
+| **Rules** | 3 | List, create, delete server-side inbox rules |
 
-| Method | Best For |
-|--------|----------|
-| [DXT Extension](#installing-as-dxt-extension) | Claude Desktop users |
-| [CLI Configuration](#using-with-cli-tools) | Claude Code, mcp CLI, other MCP clients |
+## Quick start
 
-> **Prerequisites**: Before installing, you'll need to [set up an Azure application](#azure-setup-guide) to get your Client ID and Tenant ID.
+### 1. Register an Azure app (one-time, 5 minutes)
 
----
-
-## Installation
-
-### Installing as DXT Extension
-
-For Claude Desktop users, DXT extensions provide the simplest installation experience.
-
-**Option 1: Download Pre-built Extension**
-1. Download `outlook-mcp.dxt` from the [Releases page](https://github.com/XenoXilus/outlook-mcp/releases)
-2. In Claude Desktop, go to **Settings** → **Extensions**
-3. Click **Install from file** and select the `.dxt` file
-4. Enter your Azure Client ID, Tenant ID, and optional download directory when prompted
-
-**Option 2: Build from Source**
-1. Clone and install dependencies:
-   ```bash
-   git clone https://github.com/XenoXilus/outlook-mcp.git
-   cd outlook-mcp
-   npm install
+1. Go to [Azure Portal → App registrations](https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) → **New registration**
+2. Name it anything (e.g., `MCP Outlook`), pick your account type:
+   - **Work/school**: "Accounts in this organizational directory only"
+   - **Personal** (outlook.com): "Accounts in any organizational directory and personal Microsoft accounts"
+3. Redirect URI: select **Web**, enter `http://localhost/callback`
+4. After registration, go to **Authentication** → enable **Allow public client flows** → Save
+5. Go to **API permissions** → Add **Microsoft Graph** → **Delegated permissions**:
    ```
-2. Install the DXT CLI: `npm install -g @anthropic-ai/dxt`
-3. Pack the extension:
-   ```bash
-   dxt pack . outlook-mcp.dxt
+   Mail.Read  Mail.ReadWrite  Mail.Send
+   Calendars.Read  Calendars.ReadWrite
+   User.Read  MailboxSettings.Read
+   Files.Read.All  Sites.Read.All
+   offline_access
    ```
-4. Install the generated `.dxt` file in Claude Desktop as above
+6. Copy your **Application (client) ID** and **Directory (tenant) ID** from the Overview page
 
----
+> No client secret needed — this uses OAuth 2.0 with PKCE (see [How authentication works](#how-authentication-works)).
 
-### Using with CLI Tools
+### 2. Install and configure
 
-For CLI-based MCP clients (Claude Code, mcp CLI, etc.), configure the server directly.
-
-**1. Clone and Install:**
 ```bash
-git clone https://github.com/XenoXilus/outlook-mcp.git
-cd outlook-mcp
+git clone https://github.com/w21180239/mcp-outlook.git
+cd mcp-outlook
 npm install
 ```
 
-**2. Configure your MCP client:**
+Then add the server to your AI tool's MCP configuration:
 
-Add the following to your MCP servers configuration (location varies by client):
+<details>
+<summary><b>Claude Code</b></summary>
 
+```bash
+claude mcp add outlook -- node /absolute/path/to/mcp-outlook/server/index.js \
+  --env AZURE_CLIENT_ID=your-client-id \
+  --env AZURE_TENANT_ID=your-tenant-id
+```
+
+Or add to `~/.claude.json`:
 ```json
 {
-  "outlook-mcp": {
-    "command": "node",
-    "args": ["/absolute/path/to/outlook-mcp/server/index.js"],
-    "env": {
-      "AZURE_CLIENT_ID": "your-azure-client-id",
-      "AZURE_TENANT_ID": "your-azure-tenant-id",
-      "MCP_OUTLOOK_WORK_DIR": "/optional/download/directory"
+  "mcpServers": {
+    "outlook": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-outlook/server/index.js"],
+      "env": {
+        "AZURE_CLIENT_ID": "your-client-id",
+        "AZURE_TENANT_ID": "your-tenant-id"
+      }
     }
   }
 }
 ```
+</details>
 
-**Common config file locations:**
-- **Claude Code**: `~/.claude.json` or project-level `.mcp.json`
-- **mcp CLI**: `~/.config/mcp/servers.json`
+<details>
+<summary><b>Claude Desktop</b></summary>
 
-**3. Alternative: Use environment variables**
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+```json
+{
+  "mcpServers": {
+    "outlook": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-outlook/server/index.js"],
+      "env": {
+        "AZURE_CLIENT_ID": "your-client-id",
+        "AZURE_TENANT_ID": "your-tenant-id"
+      }
+    }
+  }
+}
+```
+</details>
 
-Instead of specifying `env` in the config, you can export the variables in your shell:
+<details>
+<summary><b>Cursor</b></summary>
 
-```bash
-export AZURE_CLIENT_ID="your-azure-client-id"
-export AZURE_TENANT_ID="your-azure-tenant-id"
-export MCP_OUTLOOK_WORK_DIR="/optional/download/directory"
+Add to `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally:
+```json
+{
+  "mcpServers": {
+    "outlook": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-outlook/server/index.js"],
+      "env": {
+        "AZURE_CLIENT_ID": "your-client-id",
+        "AZURE_TENANT_ID": "your-tenant-id"
+      }
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><b>Windsurf / Other MCP clients</b></summary>
+
+The server speaks standard MCP over stdio. Point your client at:
+```
+command: node
+args: ["/absolute/path/to/mcp-outlook/server/index.js"]
+env: AZURE_CLIENT_ID=..., AZURE_TENANT_ID=...
+```
+</details>
+
+### 3. Authenticate
+
+The first time any tool is called, a browser window opens for Microsoft login. After that, tokens are cached and refreshed automatically — no re-login needed between sessions.
+
+---
+
+## How authentication works
+
+This server uses **OAuth 2.0 Authorization Code flow with PKCE** (Proof Key for Code Exchange), the recommended pattern for public clients (desktop/CLI apps) that cannot securely store a client secret.
+
+```
+Agent calls a tool
+       │
+       ▼
+┌─ ensureAuthenticated() ─────────────────────────────┐
+│  Token cached & valid?  ──yes──▶  Use cached token   │
+│        │ no                                          │
+│  Refresh token works?   ──yes──▶  Silent refresh     │
+│        │ no                                          │
+│  Start PKCE flow:                                    │
+│    1. Generate random code_verifier + code_challenge  │
+│    2. Open browser → Microsoft login page             │
+│    3. User authenticates, Azure redirects to          │
+│       localhost:{random_port}/callback with auth code  │
+│    4. Exchange code + code_verifier for tokens         │
+│    5. Store tokens encrypted on disk                  │
+└──────────────────────────────────────────────────────┘
 ```
 
----
-
-## Azure Setup Guide
-
-To use this MCP server, you need to register an application in Microsoft Azure.
-
-### For Business/Work Accounts (Recommended)
-
-1. Go to the [Azure Portal](https://portal.azure.com/) and search for "App registrations".
-2. Click **New registration**.
-   - Name: `Outlook MCP` (or similar)
-   - Supported account types: **Accounts in this organizational directory only** (Single tenant)
-   - Redirect URI: Select **Web** and enter `http://localhost/callback`
-3. Click **Register**.
-4. Go to **Authentication** in the sidebar.
-   - Under "Advanced settings", set **Allow public client flows** to **Yes**.
-   - Click **Save**.
-5. On the Overview page, copy:
-   - **Application (client) ID** → This is your `AZURE_CLIENT_ID`
-   - **Directory (tenant) ID** → This is your `AZURE_TENANT_ID`
-6. Go to **API permissions** in the sidebar.
-   - Click **Add a permission** -> **Microsoft Graph** -> **Delegated permissions**.
-   - Add these permissions:
-     - `Mail.Read`, `Mail.ReadWrite`, `Mail.Send`
-     - `Calendars.Read`, `Calendars.ReadWrite`
-     - `User.Read`, `MailboxSettings.Read`
-     - `Files.Read.All`, `Files.ReadWrite.All`
-     - `Sites.Read.All`, `Sites.ReadWrite.All`
-     - `offline_access`
-   - Click **Add permissions**.
-   - (Optional) If you are an admin, click **Grant admin consent** to suppress consent prompts for users.
-
-**Note:** No client secret is required (PKCE auth flow).
-
-### For Personal Accounts (outlook.com, hotmail.com)
-
-Personal Microsoft accounts can also register apps in Azure:
-
-1. Sign in to the [Azure Portal](https://portal.azure.com/) with your personal Microsoft account (outlook.com, hotmail.com, etc.).
-2. If prompted to create a directory, follow the steps to create a free Azure directory.
-3. Follow the same steps as above for Business accounts.
-4. When configuring, use **Accounts in any organizational directory and personal Microsoft accounts** for supported account types.
+**Key properties:**
+- **No client secret** — the PKCE challenge/verifier pair proves the caller is the same entity that started the flow
+- **Tokens encrypted at rest** — AES-256 encryption using OS keychain (via `keytar`) or a random persistent key
+- **Scoped to `/me/`** — all Graph API calls are scoped to the authenticated user's own mailbox, calendar, and files
+- **Automatic refresh** — expired tokens are silently refreshed using the stored refresh token; browser re-login only happens when the refresh token itself expires
 
 ---
 
-## Configuration Reference
+## Example prompts
 
-### Environment Variables
+Once connected, just talk to your agent naturally:
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `AZURE_CLIENT_ID` | Yes | Your Azure AD application client ID |
-| `AZURE_TENANT_ID` | Yes | Your Azure AD directory (tenant) ID |
-| `MCP_OUTLOOK_WORK_DIR` | No | Directory for saving large files (defaults to system temp) |
-
-### Large File Handling
-
-When downloading large attachments or SharePoint files, the server automatically detects when the response would exceed the MCP 1MB limit and saves the content to local files instead.
-
-- If `MCP_OUTLOOK_WORK_DIR` is set, large files are saved to this directory
-- If not set, files are saved to the system temp directory
-- Files are automatically named with timestamps to avoid conflicts
-- Old files are periodically cleaned up to manage disk space
-
----
-
-## Example Prompts
-
-Once installed, you can ask the AI assistant things like:
-
-**Email Management**
-- "Show me my unread emails from this week"
-- "Find all emails from John about the project proposal"
-- "Send a reply to the last email from Sarah thanking her for the update"
-- "Draft an email to the team summarizing today's meeting"
+**Email**
+- "Show me unread emails from this week"
+- "Find all emails from Alice about the budget"
+- "Reply to that email thanking her for the update"
+- "Draft an email to the team with meeting notes"
 
 **Calendar**
 - "What meetings do I have tomorrow?"
-- "Schedule a 30-minute call with Alex next Tuesday afternoon"
-- "Show me my availability for the rest of the week"
+- "Schedule a 30-min call with Bob next Tuesday at 2pm"
+- "Am I free on Friday afternoon?"
 
-**Attachments & SharePoint**
-- "Download and summarize the PDF attachment from the latest email from Finance"
-- "Get the contents of this SharePoint link: [paste link]"
-- "What files were attached to emails from Legal this month?"
+**Attachments**
+- "Download and summarize the PDF from the latest Finance email"
+- "What's in the Excel file attached to that report?"
 
-**Office Document Processing**
+**SharePoint**
+- "Get the contents of this SharePoint link: [paste]"
 
-The server automatically parses:
-- **PDF files**: Extracts text content
-- **Word documents** (.docx): Extracts text content
-- **PowerPoint** (.pptx): Extracts slide text
-- **Excel** (.xlsx): Parses data into structured format
+**Rules**
+- "Show my inbox rules"
+- "Create a rule to move emails from noreply@example.com to the Archive folder"
 
 ---
 
-## Authentication
+## Configuration
 
-The server uses OAuth 2.0 with PKCE for secure authentication:
-
-1. First run will open a browser for Microsoft authentication
-2. Tokens are encrypted and stored locally (uses OS keychain if available, otherwise encrypted file storage)
-3. Automatic token refresh for long-term usage
-4. No sensitive data stored in plain text
-
-### Required Permissions
-
-The app requests these Microsoft Graph permissions:
-
-- `Mail.Read`, `Mail.ReadWrite`, `Mail.Send` - Email access
-- `Calendars.Read`, `Calendars.ReadWrite` - Calendar access  
-- `User.Read`, `MailboxSettings.Read` - User profile
-- `Files.Read.All`, `Files.ReadWrite.All` - OneDrive/SharePoint files
-- `Sites.Read.All`, `Sites.ReadWrite.All` - SharePoint sites
-- `offline_access` - Refresh tokens
+| Environment variable | Required | Description |
+|---------------------|----------|-------------|
+| `AZURE_CLIENT_ID` | Yes | Azure AD application client ID |
+| `AZURE_TENANT_ID` | Yes | Azure AD directory (tenant) ID |
+| `MCP_OUTLOOK_WORK_DIR` | No | Directory for saving large files (defaults to system temp) |
+| `DEBUG` | No | Set to any value to enable debug logging on stderr |
 
 ---
 
-## Troubleshooting
+## For agent builders
 
-### Large File Issues
-- **Problem**: "Result exceeds maximum length" error
-- **Solution**: Ensure `MCP_OUTLOOK_WORK_DIR` is set and writable
-- **Alternative**: Files automatically save to system temp if work dir not configured
+### Claude Code skill
 
-### Authentication Issues
-- **Problem**: Authentication failures
-- **Solution**: Verify Azure AD app permissions and client ID
-- **Reset**: Clear stored tokens and re-authenticate
+If you use Claude Code and want Outlook tools always available, create a skill file:
 
-### SharePoint Access Issues
-- **Problem**: Cannot access SharePoint files
-- **Solution**: Ensure sharing links are valid and user has access permissions
-- **Alternative**: Use direct file ID access if available
+```markdown
+# ~/.claude/skills/outlook/SKILL.md
+---
+name: outlook
+description: Use when the user wants to read/send emails, check calendar, download attachments, or manage inbox rules via Outlook
+---
+
+The user has an Outlook MCP server configured. Use the `outlook_*` tools to interact with their Outlook account. Available tool categories:
+
+- Email: outlook_list_emails, outlook_search_emails, outlook_send_email, outlook_reply_to_email, outlook_create_draft, etc.
+- Calendar: outlook_list_events, outlook_create_event, outlook_check_availability, etc.
+- Attachments: outlook_list_attachments, outlook_download_attachment
+- Folders: outlook_list_folders, outlook_create_folder
+- SharePoint: outlook_get_sharepoint_file, outlook_list_sharepoint_files
+- Rules: outlook_list_rules, outlook_create_rule, outlook_delete_rule
+
+Always call outlook_list_emails or outlook_search_emails before trying to operate on specific messages.
+```
+
+### AGENTS.md / system prompt guidance
+
+If building an agent that uses this server, add to your system prompt:
+
+```
+You have access to Outlook via MCP tools prefixed with `outlook_`.
+- Always search/list before operating on specific items (you need message IDs).
+- Email send/reply is a high-stakes action — confirm with the user before sending.
+- Attachment downloads may return parsed text content (PDF, Word, Excel) directly.
+- Use outlook_search_emails for targeted queries; outlook_list_emails for browsing.
+```
 
 ---
 
 ## Development
 
-### Project Structure
+### Project structure
+
 ```
-outlook-mcp/
+mcp-outlook/
 ├── server/
-│   ├── index.js              # Main MCP server
-│   ├── auth/                 # Authentication management
-│   ├── graph/                # Microsoft Graph API client
-│   ├── schemas/              # MCP tool schemas
-│   ├── tools/                # MCP tool implementations
-│   │   ├── attachments/      # Attachment tools
-│   │   ├── calendar/         # Calendar tools
-│   │   ├── email/            # Email tools
-│   │   ├── folders/          # Folder management
-│   │   └── sharepoint/       # SharePoint tools
-│   └── utils/                # Utility modules
-└── package.json
+│   ├── index.js              # MCP server entry (114 lines)
+│   ├── auth/                  # OAuth 2.0 PKCE authentication
+│   │   ├── auth.js            # Core auth manager (338 lines)
+│   │   ├── browserLauncher.js # Platform-specific browser open
+│   │   ├── templates.js       # OAuth callback HTML pages
+│   │   ├── tokenManager.js    # Encrypted token persistence
+│   │   └── config.js          # OAuth configuration
+│   ├── graph/                 # Microsoft Graph API client
+│   ├── schemas/               # MCP tool schema definitions
+│   ├── tools/
+│   │   ├── dispatcher.js      # Tool name → handler registry
+│   │   ├── common/            # Shared utilities (file parsing, logging)
+│   │   ├── email/             # Email tools
+│   │   ├── calendar/          # Calendar tools
+│   │   ├── attachments/       # Attachment tools
+│   │   ├── folders/           # Folder tools
+│   │   ├── sharepoint/        # SharePoint tools
+│   │   └── rules/             # Inbox rules tools
+│   ├── utils/                 # Error handling, validation, caching
+│   └── tests/                 # 262 tests (vitest)
+├── package.json
+└── vitest.config.js
 ```
 
-### Running Tests
+### Running tests
+
 ```bash
-npm test                    # Run all tests
-npm run test:watch          # Watch mode
-npm run test:benchmark      # Performance benchmarks
+npm test                      # Run all 262 tests
+npm run test:watch            # Watch mode
+npx vitest run --coverage     # With coverage report (~61%)
 ```
 
-### Debugging
-```bash
-npm run test:graph          # Test Graph API connection
-```
+### Architecture decisions
+
+- **Pure ESM** — no CommonJS, no transpilation
+- **No client secret** — OAuth PKCE only, suitable for local/CLI deployment
+- **Dispatcher pattern** — tool routing via registry map, not a switch statement
+- **Conditional logging** — debug output gated behind `DEBUG` env var; `warn` level always on
+- **Characterization tests** — tests written against existing behavior before refactoring, then maintained
 
 ---
 
-## Support
+## Security
 
-If this tool saved you time, consider supporting the development!
+- Tokens encrypted at rest (OS keychain or AES-256 with random key)
+- No sensitive data in MCP tool responses (OAuth errors sanitized, stack traces removed)
+- Email recipient validation before sending
+- All Graph API calls scoped to authenticated user (`/me/` prefix)
+- Debug logging gated behind `DEBUG` env var to prevent accidental data exposure
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5f5f?logo=ko-fi)](https://ko-fi.com/xenoxilus)
+Report security issues via [GitHub Issues](https://github.com/w21180239/mcp-outlook/issues) (private disclosure preferred for critical issues).
 
 ---
+
+## Acknowledgements
+
+This project was originally forked from [XenoXilus/outlook-mcp](https://github.com/XenoXilus/outlook-mcp). It has since been substantially rewritten with a modular architecture, comprehensive test suite, security hardening, and new features.
 
 ## License
 
-MIT License
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make changes with tests
-4. Submit a pull request
+[MIT](LICENSE)
