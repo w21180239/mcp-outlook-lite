@@ -49,7 +49,18 @@ describe('isHeadlessEnvironment', () => {
     delete process.env.SSH_CONNECTION;
     delete process.env.container;
     delete process.env.DOCKER_CONTAINER;
-    expect(isHeadlessEnvironment()).toBe(false);
+    // On Linux CI (no DISPLAY), the platform check would return true.
+    // Set DISPLAY to simulate a desktop environment for this test.
+    const origDisplay = process.env.DISPLAY;
+    if (process.platform === 'linux' && !process.env.DISPLAY) {
+      process.env.DISPLAY = ':0';
+    }
+    try {
+      expect(isHeadlessEnvironment()).toBe(false);
+    } finally {
+      if (origDisplay === undefined) delete process.env.DISPLAY;
+      else process.env.DISPLAY = origDisplay;
+    }
   });
 
   it('returns true when SSH_CLIENT is set', () => {
