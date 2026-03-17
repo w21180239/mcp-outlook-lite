@@ -14,10 +14,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'npm'
@@ -47,7 +47,7 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: Outlook MCP ${{ steps.version.outputs.VERSION }}
           body: |
@@ -68,7 +68,7 @@ jobs:
             echo "${{ steps.checksum.outputs.SHA256 }}  outlook-mcp.dxt" | sha256sum -c
             ```
             
-            See [README](https://github.com/XenoXilus/outlook-mcp#readme) for Azure setup instructions.
+            See [README](https://github.com/w21180239/mcp-outlook-lite#readme) for setup instructions.
           files: |
             outlook-mcp.dxt
             outlook-mcp.dxt.sha256
