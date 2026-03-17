@@ -515,7 +515,7 @@ export async function getSharePointFileTool(authManager, args) {
     return createSafeResponse(finalResponse);
 
   } catch (error) {
-    console.error('SharePoint file access error:', error);
+    warn('SharePoint file access error:', error.message);
 
     if (error.isError) {
       return error; // Already an MCP error
@@ -588,7 +588,7 @@ export async function resolveSharePointLinkTool(authManager, args) {
     });
 
   } catch (error) {
-    console.error('SharePoint link resolution error:', error);
+    warn('SharePoint link resolution error:', error.message);
     return convertErrorToToolError(error, 'SharePoint link resolution failed');
   }
 }
@@ -642,7 +642,7 @@ export async function listSharePointFilesTool(authManager, args) {
     });
 
   } catch (error) {
-    console.error('SharePoint list files error:', error);
+    warn('SharePoint list files error:', error.message);
     return convertErrorToToolError(error, 'SharePoint file listing failed');
   }
 }

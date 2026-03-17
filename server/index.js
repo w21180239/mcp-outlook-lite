@@ -52,7 +52,7 @@ process.on('uncaughtException', (error) => {
     }));
 
     server.setNotificationHandler(InitializedNotificationSchema, async () => {
-      console.error('Debug: Client initialized');
+      debug('Debug: Client initialized');
     });
 
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
