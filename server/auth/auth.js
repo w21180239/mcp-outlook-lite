@@ -178,8 +178,9 @@ export class OutlookAuthManager {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw createAuthError(`Token exchange failed: ${error}`, true);
+      const errorBody = await response.text();
+      console.error('Token exchange failed (raw):', errorBody);
+      throw createAuthError(`Token exchange failed (HTTP ${response.status}). Check server logs for details.`, true);
     }
 
     return await response.json();
@@ -206,8 +207,9 @@ export class OutlookAuthManager {
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw createAuthError(`Token refresh failed: ${error}`, true);
+        const errorBody = await response.text();
+        console.error('Token refresh failed (raw):', errorBody);
+        throw createAuthError(`Token refresh failed (HTTP ${response.status}). Check server logs for details.`, true);
       }
 
       const tokenResponse = await response.json();
