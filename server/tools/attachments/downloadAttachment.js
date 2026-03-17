@@ -1,7 +1,7 @@
 import { debug } from '../../utils/logger.js';
 import { convertErrorToToolError, createValidationError } from '../../utils/mcpErrorResponse.js';
-import { handleLargeContent, saveBase64File } from '../../utils/fileOutput.js';
-import { safeStringify, createSafeResponse } from '../../utils/jsonUtils.js';
+import { saveBase64File } from '../../utils/fileOutput.js';
+import { safeStringify } from '../../utils/jsonUtils.js';
 import { decodeContent as decodeFileContent, formatFileSize } from '../common/fileTypeUtils.js';
 
 function applyDecodedContent(target, decodedContent) {
