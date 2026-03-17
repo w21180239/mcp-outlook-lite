@@ -5,7 +5,7 @@
  * Handles various SharePoint URL formats and sharing links.
  */
 
-import { debug } from '../../utils/logger.js';
+import { debug, warn } from '../../utils/logger.js';
 import { convertErrorToToolError, createValidationError, createToolError } from '../../utils/mcpErrorResponse.js';
 import { handleLargeContent, saveBase64File } from '../../utils/fileOutput.js';
 import { safeStringify, createSafeResponse } from '../../utils/jsonUtils.js';
@@ -316,7 +316,7 @@ async function getFileFromDrive(graphClient, driveId, itemId, downloadContent = 
 
     return result;
   } catch (error) {
-    console.error('Error getting file from drive:', error);
+    warn('Error getting file from drive:', error.message);
     throw new Error(`Failed to get file: ${error.message}`);
   }
 }
@@ -341,11 +341,11 @@ export async function getSharePointFileTool(authManager, args) {
     let fileResult;
 
     if (args.sharePointUrl) {
-      console.error(`Fetching SharePoint file from URL: ${args.sharePointUrl}`);
+      debug(`Fetching SharePoint file from URL: ${args.sharePointUrl}`);
 
       // Parse the SharePoint URL
       const urlInfo = parseSharePointUrl(args.sharePointUrl);
-      console.error('Parsed URL info:', safeStringify(urlInfo, 2));
+      debug('Parsed URL info:', safeStringify(urlInfo, 2));
 
       // Standard SharePoint sharing URLs from emails should be processed directly
       // They follow the format: /:x:/r/personal/ or /:w:/r/sites/ with d= and e= parameters
@@ -355,14 +355,14 @@ export async function getSharePointFileTool(authManager, args) {
         // Check for standard sharing parameters from email links
         (urlInfo.searchParams && (urlInfo.searchParams.d || urlInfo.searchParams.e))) {
 
-        console.error('Debug: Detected standard SharePoint sharing URL from email, attempting resolution');
+        debug('Debug: Detected standard SharePoint sharing URL from email, attempting resolution');
         try {
           fileResult = await resolveSharedFile(graphApiClient, args.sharePointUrl, urlInfo);
           debug(`Debug: Successfully resolved file: ${fileResult.name}`);
 
           // Handle content download if requested
           if (args.downloadContent && !fileResult.folder) {
-            console.error('Debug: Content download requested for resolved sharing link');
+            debug('Debug: Content download requested for resolved sharing link');
             const maxSize = 50 * 1024 * 1024; // 50MB limit
 
             if (fileResult.size > maxSize) {
@@ -371,7 +371,7 @@ export async function getSharePointFileTool(authManager, args) {
               try {
                 const downloadUrl = fileResult['@microsoft.graph.downloadUrl'];
                 if (!downloadUrl) {
-                  console.error('Debug: No download URL available, trying to fetch it');
+                  debug('Debug: No download URL available, trying to fetch it');
                   // Try to get download URL using the file ID and parent reference
                   if (fileResult.id && fileResult.parentReference?.driveId) {
                     const freshFileInfo = await graphApiClient.makeRequest(`/drives/${fileResult.parentReference.driveId}/items/${fileResult.id}`, {
@@ -542,7 +542,7 @@ export async function resolveSharePointLinkTool(authManager, args) {
 
     // Parse the URL first
     const urlInfo = parseSharePointUrl(args.sharePointUrl);
-    console.error('Resolve SharePoint link - Parsed URL info:', safeStringify(urlInfo, 2));
+    debug('Resolve SharePoint link - Parsed URL info:', safeStringify(urlInfo, 2));
 
     // Resolve the sharing link to get metadata only
     const fileInfo = await resolveSharedFile(graphApiClient, args.sharePointUrl, urlInfo);

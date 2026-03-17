@@ -33,6 +33,7 @@ process.on('uncaughtException', (error) => {
     const { allToolSchemas } = await import('./schemas/toolSchemas.js');
     const { getToolHandler, getRegisteredToolNames } = await import('./tools/dispatcher.js');
     const { promptList, getPrompt } = await import('./prompts/index.js');
+    const { debug } = await import('./utils/logger.js');
 
     const server = new Server(
       { name: 'outlook-mcp', version: '1.0.0' },
@@ -60,7 +61,7 @@ process.on('uncaughtException', (error) => {
 
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-      console.error(`DEBUG Tool Dispatch: Called tool '${name}' with args:`, JSON.stringify(args, null, 2));
+      debug(`DEBUG Tool Dispatch: Called tool '${name}' with args:`, JSON.stringify(args, null, 2));
 
       const handler = getToolHandler(name);
       if (!handler) {
