@@ -601,6 +601,7 @@ export async function resolveSharePointLinkTool(authManager, args) {
  */
 export async function listSharePointFilesTool(authManager, args) {
   try {
+    await authManager.ensureAuthenticated();
     const graphApiClient = authManager.getGraphApiClient();
 
     let listPath;

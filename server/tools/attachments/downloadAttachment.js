@@ -1,4 +1,4 @@
-import { debug } from '../../utils/logger.js';
+import { debug, warn } from '../../utils/logger.js';
 import { convertErrorToToolError, createValidationError } from '../../utils/mcpErrorResponse.js';
 import { saveBase64File } from '../../utils/fileOutput.js';
 import { safeStringify } from '../../utils/jsonUtils.js';
@@ -167,7 +167,7 @@ export async function downloadAttachmentTool(authManager, args) {
     const maxMcpResponseSize = 1048576; // 1MB MCP limit
     
     if (responseText.length > maxMcpResponseSize && attachmentInfo.contentBytes) {
-      console.log(`Response size (${formatFileSize(responseText.length)}) exceeds MCP limit, saving to file...`);
+      warn(`Response size (${formatFileSize(responseText.length)}) exceeds MCP limit, saving to file...`);
       
       // Save the Base64 content to file
       const fileResult = await saveBase64File(

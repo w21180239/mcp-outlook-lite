@@ -197,10 +197,11 @@ describe('fileTypeUtils', () => {
     it('should detect and handle Excel files', async () => {
       const base64 = Buffer.from('fake-excel').toString('base64');
       const result = await decodeContent(base64, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'data.xlsx');
+      // XLSX library parses arbitrary data as a single-cell sheet — this is a successful parse
       expect(result.type).toBe('excel');
       expect(result.encoding).toBe('parsed');
-      // parseExcelContent will return excel_error for fake data, which is wrapped as content
       expect(result.content).toBeDefined();
+      expect(result.sizeFormatted).toBeDefined();
     });
 
     it('should return binary for unknown types', async () => {
