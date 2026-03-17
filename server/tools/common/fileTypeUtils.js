@@ -1,6 +1,8 @@
 import { Buffer } from 'buffer';
-import * as XLSX from 'xlsx';
-import officeParser from 'officeparser';
+import { parseExcelContent } from './excelParser.js';
+import { parseOfficeDocument } from './documentParser.js';
+export { parseExcelContent } from './excelParser.js';
+export { parseOfficeDocument } from './documentParser.js';
 
 // --- Detection utilities ---
 
@@ -152,142 +154,6 @@ export function isOfficeDocument(contentType, filename) {
   }
 
   return false;
-}
-
-// --- Parsing utilities ---
-
-export function parseExcelContent(contentBytes, filename, maxSheets = 10, maxRowsPerSheet = 1000) {
-  try {
-    console.error(`Debug: Parsing Excel file: ${filename}`);
-
-    // Decode Base64 to buffer
-    const buffer = Buffer.from(contentBytes, 'base64');
-
-    // Parse Excel file
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
-
-    const result = {
-      type: 'excel',
-      filename: filename,
-      sheets: [],
-      summary: {
-        totalSheets: workbook.SheetNames.length,
-        sheetNames: workbook.SheetNames
-      }
-    };
-
-    // Process up to maxSheets sheets
-    const sheetsToProcess = workbook.SheetNames.slice(0, maxSheets);
-
-    for (const sheetName of sheetsToProcess) {
-      console.error(`Debug: Processing sheet: ${sheetName}`);
-
-      const worksheet = workbook.Sheets[sheetName];
-
-      // Get sheet range
-      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
-      const totalRows = range.e.r - range.s.r + 1;
-      const totalCols = range.e.c - range.s.c + 1;
-
-      // Limit rows to prevent overwhelming output
-      const rowsToProcess = Math.min(totalRows, maxRowsPerSheet);
-
-      // Convert to JSON with limited rows
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1, // Use array format instead of object
-        range: rowsToProcess < totalRows ? `${worksheet['!ref'].split(':')[0]}:${XLSX.utils.encode_cell({r: range.s.r + rowsToProcess - 1, c: range.e.c})}` : undefined
-      });
-
-      const sheetInfo = {
-        name: sheetName,
-        dimensions: {
-          rows: totalRows,
-          columns: totalCols,
-          range: worksheet['!ref'] || 'A1:A1'
-        },
-        data: jsonData,
-        truncated: rowsToProcess < totalRows,
-        displayedRows: jsonData.length,
-        note: rowsToProcess < totalRows ? `Sheet truncated to ${maxRowsPerSheet} rows (total: ${totalRows})` : undefined
-      };
-
-      result.sheets.push(sheetInfo);
-    }
-
-    if (workbook.SheetNames.length > maxSheets) {
-      result.summary.note = `Only first ${maxSheets} sheets displayed (total: ${workbook.SheetNames.length})`;
-    }
-
-    console.error(`Debug: Successfully parsed Excel file with ${result.sheets.length} sheets`);
-    return result;
-
-  } catch (error) {
-    console.error(`Debug: Excel parsing failed: ${error.message}`);
-    return {
-      type: 'excel_error',
-      error: `Failed to parse Excel file: ${error.message}`,
-      note: 'File may be corrupted or in an unsupported Excel format'
-    };
-  }
-}
-
-export function parseOfficeDocument(contentBytes, filename, maxTextLength = 50000) {
-  try {
-    console.error(`Debug: Parsing office document: ${filename}`);
-
-    // Decode Base64 to buffer
-    const buffer = Buffer.from(contentBytes, 'base64');
-
-    // Parse office document using officeParser
-    // NOTE: officeparser uses non-standard (data, err) callback signature
-    return new Promise((resolve) => {
-      officeParser.parseOffice(buffer, (data, err) => {
-        if (err) {
-          console.error(`Debug: Office parsing failed: ${err}`);
-          resolve({
-            type: 'office_error',
-            error: `Failed to parse office document: ${err}`,
-            note: 'File may be corrupted, password-protected, or in an unsupported format'
-          });
-          return;
-        }
-
-        // Extract and process the text content
-        const extractedText = data || '';
-        const textLength = extractedText.length;
-        const truncated = textLength > maxTextLength;
-        const displayText = truncated ? extractedText.substring(0, maxTextLength) + '...' : extractedText;
-
-        const result = {
-          type: 'office_document',
-          filename: filename,
-          content: {
-            text: displayText,
-            extractedLength: textLength,
-            truncated: truncated,
-            truncatedLength: truncated ? maxTextLength : undefined,
-            note: truncated ? `Text truncated to ${maxTextLength} characters (total: ${textLength})` : undefined
-          },
-          metadata: {
-            originalSize: buffer.length,
-            textLength: textLength,
-            hasContent: textLength > 0
-          }
-        };
-
-        console.error(`Debug: Successfully parsed office document with ${textLength} characters of text`);
-        resolve(result);
-      });
-    });
-
-  } catch (error) {
-    console.error(`Debug: Office parsing failed: ${error.message}`);
-    return Promise.resolve({
-      type: 'office_error',
-      error: `Failed to parse office document: ${error.message}`,
-      note: 'File may be corrupted, password-protected, or in an unsupported format'
-    });
-  }
 }
 
 // --- Content decoder ---
