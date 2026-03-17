@@ -1,9 +1,26 @@
 import { applyUserStyling, clearStylingCache } from '../common/sharedUtils.js';
-import { convertErrorToToolError } from '../../utils/mcpErrorResponse.js';
+import { convertErrorToToolError, createValidationError } from '../../utils/mcpErrorResponse.js';
+import { InputValidator } from '../../utils/InputValidator.js';
+
+const validator = new InputValidator();
 
 // Send email with user styling
 export async function sendEmailTool(authManager, args) {
   const { to, subject, body, bodyType = 'text', cc = [], bcc = [], preserveUserStyling = true } = args;
+
+  // Validate recipient email addresses before sending
+  if (!to || !Array.isArray(to) || to.length === 0) {
+    return createValidationError('to', 'At least one valid recipient email address is required');
+  }
+  if (!validator.validateEmailArray(to)) {
+    return createValidationError('to', 'One or more recipient email addresses are invalid');
+  }
+  if (cc.length > 0 && !validator.validateEmailArray(cc)) {
+    return createValidationError('cc', 'One or more CC email addresses are invalid');
+  }
+  if (bcc.length > 0 && !validator.validateEmailArray(bcc)) {
+    return createValidationError('bcc', 'One or more BCC email addresses are invalid');
+  }
 
   try {
     await authManager.ensureAuthenticated();
