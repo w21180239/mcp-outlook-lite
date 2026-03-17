@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createMockAuthManager } from '../../helpers/mockAuthManager.js';
-import { listSharePointFilesTool } from '../../../tools/sharepoint/getSharePointFile.js';
+import { listSharePointFilesTool, getSharePointFileTool } from '../../../tools/sharepoint/getSharePointFile.js';
 
 describe('SharePoint Tools', () => {
   let authManager;
@@ -64,6 +64,50 @@ describe('SharePoint Tools', () => {
       const result = await listSharePointFilesTool(authManager, {});
 
       expect(result.isError).toBe(true);
+    });
+  });
+
+  describe('getSharePointFileTool', () => {
+    it('should return validation error when neither sharePointUrl nor fileId provided', async () => {
+      const result = await getSharePointFileTool(authManager, {});
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('sharePointUrl or fileId');
+    });
+
+    it('should return error for non-SharePoint URL', async () => {
+      const result = await getSharePointFileTool(authManager, {
+        sharePointUrl: 'https://example.com/file.docx',
+      });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('SharePoint');
+    });
+
+    it('should fetch file by fileId', async () => {
+      // ensureAuthenticated returns the graph client
+      authManager.ensureAuthenticated.mockResolvedValue({});
+
+      graphApiClient.makeRequest.mockResolvedValue({
+        id: 'item-1',
+        name: 'budget.xlsx',
+        size: 4096,
+        createdDateTime: '2024-01-01T00:00:00Z',
+        lastModifiedDateTime: '2024-02-01T00:00:00Z',
+        webUrl: 'https://company.sharepoint.com/budget.xlsx',
+        file: { mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+      });
+
+      const result = await getSharePointFileTool(authManager, { fileId: 'item-1' });
+
+      expect(result.isError).toBeUndefined();
+      const data = JSON.parse(result.content[0].text);
+      // handleLargeContent wraps the response; the original data may be nested under content
+      const fileData = data.success ? data : data.content;
+      expect(fileData.success).toBe(true);
+      expect(fileData.file.name).toBe('budget.xlsx');
+      expect(graphApiClient.makeRequest).toHaveBeenCalledWith(
+        '/drives/me/items/item-1',
+        expect.any(Object)
+      );
     });
   });
 });
