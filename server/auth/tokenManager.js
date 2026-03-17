@@ -22,6 +22,7 @@ const getKeytar = async () => {
 };
 import storage from 'node-persist';
 import crypto from 'crypto';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createAuthError, convertErrorToToolError } from '../utils/mcpErrorResponse.js';
@@ -70,11 +71,26 @@ export class TokenManager {
     }
     
     // Fallback for environments without keytar (containers, MCP servers, etc.)
-    // Tokens will still be encrypted and stored securely in the file system
-    const fallbackKey = crypto.createHash('sha256')
-      .update(this.clientId + (process.env.AZURE_TENANT_ID || 'default'))
-      .digest();
-    return fallbackKey;
+    // Generate a random key and persist it to a protected file
+    const tokensDir = path.join(__dirname, '../../.tokens');
+    const keyPath = path.join(tokensDir, '.enckey');
+
+    try {
+      const existing = fs.readFileSync(keyPath);
+      if (existing.length === 32) {
+        return existing;
+      }
+    } catch {
+      // Key file doesn't exist yet, generate one
+    }
+
+    if (!fs.existsSync(tokensDir)) {
+      fs.mkdirSync(tokensDir, { recursive: true });
+    }
+
+    const newKey = crypto.randomBytes(32);
+    fs.writeFileSync(keyPath, newKey, { mode: 0o600 });
+    return newKey;
   }
 
   encrypt(text) {
