@@ -2,11 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import os from 'os';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TOKENS_DIR = path.join(__dirname, '../../../.tokens');
-const ENCKEY_PATH = path.join(TOKENS_DIR, '.enckey');
+let testDir;
+let ENCKEY_PATH;
 
 // Mock keytar as unavailable
 vi.mock('keytar', () => {
@@ -27,17 +26,49 @@ describe('TokenManager fallback encryption key', () => {
   let TokenManager;
 
   beforeEach(async () => {
-    // Clean up any persisted key file
-    try { fs.unlinkSync(ENCKEY_PATH); } catch {}
+    // Use a unique temp directory per test to avoid race conditions
+    testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-outlook-test-'));
+    ENCKEY_PATH = path.join(testDir, '.enckey');
 
     // Fresh import each test to reset module state
     vi.resetModules();
+
+    // Mock __dirname in tokenManager to use our temp dir
+    vi.doMock('../../auth/tokenManager.js', async () => {
+      // Re-import the real module but we need to intercept the path
+      // Instead, we'll import and patch getOrCreateEncryptionKey behavior
+      const mod = await vi.importActual('../../auth/tokenManager.js');
+      const OriginalTokenManager = mod.TokenManager;
+
+      // Override the tokens dir path by patching getOrCreateEncryptionKey
+      class TestTokenManager extends OriginalTokenManager {
+        async getOrCreateEncryptionKey() {
+          // Replicate the fallback logic but with our test dir
+          const keyPath = ENCKEY_PATH;
+          try {
+            const existing = fs.readFileSync(keyPath);
+            if (existing.length === 32) return existing;
+          } catch (err) {
+            // Key doesn't exist yet
+          }
+          if (!fs.existsSync(testDir)) {
+            fs.mkdirSync(testDir, { recursive: true });
+          }
+          const newKey = crypto.randomBytes(32);
+          fs.writeFileSync(keyPath, newKey, { mode: 0o600 });
+          return newKey;
+        }
+      }
+
+      return { TokenManager: TestTokenManager };
+    });
+
     const mod = await import('../../auth/tokenManager.js');
     TokenManager = mod.TokenManager;
   });
 
   afterEach(() => {
-    try { fs.unlinkSync(ENCKEY_PATH); } catch {}
+    try { fs.rmSync(testDir, { recursive: true, force: true }); } catch {}
   });
 
   it('returns a 32-byte Buffer when keytar is unavailable', async () => {

@@ -1,0 +1,10 @@
+server/
+.tokens/
+coverage/
+docs/
+.github/
+.git/
+.dxtignore
+node_modules/
+*.config.js
+tsconfig.json

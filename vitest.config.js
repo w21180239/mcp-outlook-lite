@@ -15,8 +15,13 @@ export default defineConfig({
       exclude: [
         'node_modules/**',
         'server/tests/**',
+        'server/test/**',
+        'server/tools/test/**',
         '**/*.config.js',
-        '**/*.benchmark.js'
+        '**/*.benchmark.js',
+        'dist/**',
+        'server/types.ts',
+        'server/declarations.d.ts'
       ]
     }
   }

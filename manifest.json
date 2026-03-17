@@ -1,7 +1,7 @@
 {
   "dxt_version": "0.1",
   "name": "outlook-mcp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Connects your LLM to the Outlook setup. Read and write emails, contacts, and calendar events. ",
   "author": {
     "name": "XenoXilus",
@@ -30,11 +30,11 @@
   },
   "server": {
     "type": "node",
-    "entry_point": "server/index.js",
+    "entry_point": "dist/index.js",
     "mcp_config": {
       "command": "node",
       "args": [
-        "${__dirname}/server/index.js"
+        "${__dirname}/dist/index.js"
       ],
       "env": {
         "AZURE_CLIENT_ID": "${user_config.azure_client_id}",

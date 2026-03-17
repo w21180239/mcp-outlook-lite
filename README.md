@@ -3,8 +3,9 @@
 A production-grade [Model Context Protocol](https://modelcontextprotocol.io) server that connects AI agents to Microsoft Outlook — email, calendar, attachments, SharePoint, and inbox rules — via the Microsoft Graph API.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-262%20passing-brightgreen)]()
-[![Coverage](https://img.shields.io/badge/coverage-61%25-yellow)]()
+[![Tests](https://img.shields.io/badge/tests-769%20passing-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-81%25-brightgreen)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D18-blue)]()
 
 ## What it does
@@ -46,10 +47,16 @@ Give any MCP-compatible AI agent (Claude, GPT, Gemini, etc.) the ability to read
 
 ### 2. Install and configure
 
+**Option A: npm (recommended)**
+```bash
+npm install -g mcp-outlook
+```
+
+**Option B: Clone from source**
 ```bash
 git clone https://github.com/w21180239/mcp-outlook.git
 cd mcp-outlook
-npm install
+npm install && npm run build
 ```
 
 Then add the server to your AI tool's MCP configuration:
@@ -58,7 +65,7 @@ Then add the server to your AI tool's MCP configuration:
 <summary><b>Claude Code</b></summary>
 
 ```bash
-claude mcp add outlook -- node /absolute/path/to/mcp-outlook/server/index.js \
+claude mcp add outlook -- npx mcp-outlook \
   --env AZURE_CLIENT_ID=your-client-id \
   --env AZURE_TENANT_ID=your-tenant-id
 ```
@@ -69,7 +76,7 @@ Or add to `~/.claude.json`:
   "mcpServers": {
     "outlook": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-outlook/server/index.js"],
+      "args": ["/absolute/path/to/mcp-outlook/dist/index.js"],
       "env": {
         "AZURE_CLIENT_ID": "your-client-id",
         "AZURE_TENANT_ID": "your-tenant-id"
@@ -89,7 +96,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "outlook": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-outlook/server/index.js"],
+      "args": ["/absolute/path/to/mcp-outlook/dist/index.js"],
       "env": {
         "AZURE_CLIENT_ID": "your-client-id",
         "AZURE_TENANT_ID": "your-tenant-id"
@@ -109,7 +116,7 @@ Add to `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally:
   "mcpServers": {
     "outlook": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-outlook/server/index.js"],
+      "args": ["/absolute/path/to/mcp-outlook/dist/index.js"],
       "env": {
         "AZURE_CLIENT_ID": "your-client-id",
         "AZURE_TENANT_ID": "your-tenant-id"
@@ -126,14 +133,20 @@ Add to `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally:
 The server speaks standard MCP over stdio. Point your client at:
 ```
 command: node
-args: ["/absolute/path/to/mcp-outlook/server/index.js"]
+args: ["/absolute/path/to/mcp-outlook/dist/index.js"]
 env: AZURE_CLIENT_ID=..., AZURE_TENANT_ID=...
 ```
 </details>
 
 ### 3. Authenticate
 
-The first time any tool is called, a browser window opens for Microsoft login. After that, tokens are cached and refreshed automatically — no re-login needed between sessions.
+The first time any tool is called, authentication begins automatically:
+- **Desktop/local**: a browser window opens for Microsoft login
+- **Headless/SSH/container**: device code flow — follow the instructions printed to stderr
+
+After that, tokens are cached and refreshed automatically — no re-login needed between sessions.
+
+> Set `MCP_OUTLOOK_DEVICE_CODE=1` to force device code flow even when a browser is available.
 
 ---
 
@@ -203,6 +216,7 @@ Once connected, just talk to your agent naturally:
 | `AZURE_CLIENT_ID` | Yes | Azure AD application client ID |
 | `AZURE_TENANT_ID` | Yes | Azure AD directory (tenant) ID |
 | `MCP_OUTLOOK_WORK_DIR` | No | Directory for saving large files (defaults to system temp) |
+| `MCP_OUTLOOK_DEVICE_CODE` | No | Set to `1` to force device code auth flow (for headless environments) |
 | `DEBUG` | No | Set to any value to enable debug logging on stderr |
 
 ---
@@ -252,18 +266,18 @@ You have access to Outlook via MCP tools prefixed with `outlook_`.
 
 ```
 mcp-outlook/
-├── server/
-│   ├── index.js              # MCP server entry (114 lines)
-│   ├── auth/                  # OAuth 2.0 PKCE authentication
-│   │   ├── auth.js            # Core auth manager (338 lines)
-│   │   ├── browserLauncher.js # Platform-specific browser open
-│   │   ├── templates.js       # OAuth callback HTML pages
-│   │   ├── tokenManager.js    # Encrypted token persistence
-│   │   └── config.js          # OAuth configuration
+├── server/                    # TypeScript source
+│   ├── index.ts               # MCP server entry point
+│   ├── types.ts               # Shared TypeScript interfaces
+│   ├── auth/                  # OAuth 2.0 PKCE + device code authentication
+│   │   ├── auth.ts            # Core auth manager
+│   │   ├── deviceCodeFlow.ts  # Headless device code flow
+│   │   ├── tokenManager.ts    # Encrypted token persistence
+│   │   └── config.ts          # OAuth configuration
 │   ├── graph/                 # Microsoft Graph API client
 │   ├── schemas/               # MCP tool schema definitions
 │   ├── tools/
-│   │   ├── dispatcher.js      # Tool name → handler registry
+│   │   ├── dispatcher.ts      # Tool name → handler registry
 │   │   ├── common/            # Shared utilities (file parsing, logging)
 │   │   ├── email/             # Email tools
 │   │   ├── calendar/          # Calendar tools
@@ -272,7 +286,9 @@ mcp-outlook/
 │   │   ├── sharepoint/        # SharePoint tools
 │   │   └── rules/             # Inbox rules tools
 │   ├── utils/                 # Error handling, validation, caching
-│   └── tests/                 # 262 tests (vitest)
+│   └── tests/                 # 769 tests (vitest)
+├── dist/                      # Compiled JavaScript output
+├── tsconfig.json
 ├── package.json
 └── vitest.config.js
 ```
@@ -280,18 +296,20 @@ mcp-outlook/
 ### Running tests
 
 ```bash
-npm test                      # Run all 262 tests
+npm test                      # Run all 769 tests
 npm run test:watch            # Watch mode
-npx vitest run --coverage     # With coverage report (~61%)
+npm run typecheck             # TypeScript type checking
+npm run build                 # Compile to dist/
+npx vitest run --coverage     # With coverage report (~81%)
 ```
 
 ### Architecture decisions
 
-- **Pure ESM** — no CommonJS, no transpilation
-- **No client secret** — OAuth PKCE only, suitable for local/CLI deployment
-- **Dispatcher pattern** — tool routing via registry map, not a switch statement
+- **TypeScript** — strict mode with `noImplicitAny`, compiled to ES2022 ESM
+- **No client secret** — OAuth PKCE + device code flow, suitable for local/CLI/headless deployment
+- **Dispatcher pattern** — tool routing via typed registry map, not a switch statement
 - **Conditional logging** — debug output gated behind `DEBUG` env var; `warn` level always on
-- **Characterization tests** — tests written against existing behavior before refactoring, then maintained
+- **769 tests, 81% coverage** — vitest with v8 coverage provider
 
 ---
 
@@ -303,7 +321,7 @@ npx vitest run --coverage     # With coverage report (~61%)
 - All Graph API calls scoped to authenticated user (`/me/` prefix)
 - Debug logging gated behind `DEBUG` env var to prevent accidental data exposure
 
-Report security issues via [GitHub Issues](https://github.com/w21180239/mcp-outlook/issues) (private disclosure preferred for critical issues).
+Report security issues via [GitHub private vulnerability reporting](https://github.com/w21180239/mcp-outlook/security). See [SECURITY.md](SECURITY.md) for details.
 
 ---
 
