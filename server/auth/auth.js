@@ -54,6 +54,19 @@ export class OutlookAuthManager {
         return await this.validateAuthentication();
       }
 
+      // Token expired — try refreshing before falling back to interactive login
+      try {
+        const metadata = await this.tokenManager.getTokenMetadata();
+        if (metadata) {
+          console.error('Access token expired, attempting silent refresh...');
+          await this.refreshAccessToken();
+          console.error('Silent refresh succeeded — no browser login needed.');
+          return await this.validateAuthentication();
+        }
+      } catch (refreshError) {
+        console.error('Silent refresh failed, falling back to interactive login:', refreshError.message || refreshError);
+      }
+
       // Use interactive authentication with PKCE for delegated access
       return await this.authenticateInteractive();
     } catch (error) {
