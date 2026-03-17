@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Buffer } from 'buffer';
 
 // Mock the parser modules before importing fileTypeUtils
@@ -15,6 +15,10 @@ const { parseOfficeDocument } = await import('../../../tools/common/documentPars
 const { decodeContent } = await import('../../../tools/common/fileTypeUtils.js');
 
 describe('decodeContent error branches', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('should return error when parseExcelContent returns excel_error', async () => {
     parseExcelContent.mockReturnValue({
       type: 'excel_error',

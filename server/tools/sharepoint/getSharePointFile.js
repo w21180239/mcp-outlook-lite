@@ -415,8 +415,8 @@ export async function getSharePointFileTool(authManager, args) {
           debug(`Debug: Resolution failed: ${resolveError.message}`);
           return createToolError(
             `Failed to resolve SharePoint sharing link: ${resolveError.message}`,
-            'RESOLUTION_FAILED',
             {
+              code: 'RESOLUTION_FAILED',
               originalUrl: args.sharePointUrl,
               urlType: urlInfo.type,
               parsedInfo: urlInfo,
@@ -435,8 +435,8 @@ export async function getSharePointFileTool(authManager, args) {
         // For direct site URLs, try to provide more helpful guidance
         return createToolError(
           `Direct ${urlInfo.type} URLs require file-specific sharing links. Please use a sharing link to the specific file.`,
-          'DIRECT_SITE_URL_UNSUPPORTED',
           {
+            code: 'DIRECT_SITE_URL_UNSUPPORTED',
             suggestion: 'Right-click the file in SharePoint/OneDrive and select "Copy link" to get a sharing link',
             urlType: urlInfo.type,
             parsedInfo: urlInfo,
@@ -452,8 +452,8 @@ export async function getSharePointFileTool(authManager, args) {
         // Generic SharePoint URL
         return createToolError(
           `Unsupported SharePoint URL format. Please use a file sharing link.`,
-          'UNSUPPORTED_URL_FORMAT',
           {
+            code: 'UNSUPPORTED_URL_FORMAT',
             suggestion: 'Generate a sharing link from SharePoint by right-clicking the file and selecting "Copy link"',
             urlType: urlInfo.type,
             parsedInfo: urlInfo,
@@ -468,6 +468,10 @@ export async function getSharePointFileTool(authManager, args) {
       // Direct file access using Graph API
       const driveId = args.driveId || 'me'; // Default to user's OneDrive
       fileResult = await getFileFromDrive(graphApiClient, driveId, args.fileId, args.downloadContent);
+    }
+
+    if (!fileResult) {
+      return createToolError('Internal error: file result not resolved');
     }
 
     const response = {
@@ -533,6 +537,7 @@ export async function resolveSharePointLinkTool(authManager, args) {
       return createValidationError('sharePointUrl', 'SharePoint URL is required');
     }
 
+    await authManager.ensureAuthenticated();
     const graphApiClient = authManager.getGraphApiClient();
 
     // Parse the URL first
