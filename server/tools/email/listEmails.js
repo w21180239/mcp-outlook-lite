@@ -1,4 +1,5 @@
 // List emails from a specific folder
+import { debug } from '../../utils/logger.js';
 import { convertErrorToToolError, createValidationError } from '../../utils/mcpErrorResponse.js';
 import { createSafeResponse, safeStringify } from '../../utils/jsonUtils.js';
 import { stripHtml, truncateText } from '../../utils/textUtils.js';
@@ -68,7 +69,7 @@ export async function listEmailsTool(authManager, args) {
 
 // Get detailed information about a specific email
 export async function getEmailTool(authManager, args) {
-  console.error(`DEBUG getEmailTool: Called with args:`, JSON.stringify(args, null, 2));
+  debug(`DEBUG getEmailTool: Called with args:`, JSON.stringify(args, null, 2));
   const {
     messageId,
     truncate = true,
@@ -77,12 +78,12 @@ export async function getEmailTool(authManager, args) {
   } = args;
 
   if (!messageId) {
-    console.error(`DEBUG getEmailTool: Missing messageId parameter`);
+    debug(`DEBUG getEmailTool: Missing messageId parameter`);
     return createValidationError('messageId', 'Parameter is required');
   }
 
   try {
-    console.error(`DEBUG getEmailTool: Starting authentication for messageId: ${messageId}`);
+    debug(`DEBUG getEmailTool: Starting authentication for messageId: ${messageId}`);
     await authManager.ensureAuthenticated();
     const graphApiClient = authManager.getGraphApiClient();
 
@@ -90,25 +91,25 @@ export async function getEmailTool(authManager, args) {
       select: 'id,subject,from,toRecipients,ccRecipients,bccRecipients,receivedDateTime,sentDateTime,body,bodyPreview,importance,isRead,hasAttachments,attachments,conversationId'
     };
 
-    console.error(`DEBUG getEmailTool: Making Graph API request for ${messageId}`);
+    debug(`DEBUG getEmailTool: Making Graph API request for ${messageId}`);
     const email = await graphApiClient.makeRequest(`/me/messages/${messageId}`, options);
-    console.error(`DEBUG getEmailTool: Got email response with subject: ${email?.subject || 'NO SUBJECT'}`);
+    debug(`DEBUG getEmailTool: Got email response with subject: ${email?.subject || 'NO SUBJECT'}`);
 
     // Check if the response is already an MCP error
     if (email && email.content && email.isError !== undefined) {
-      console.error(`DEBUG getEmailTool: Graph API returned MCP error:`, email);
+      debug(`DEBUG getEmailTool: Graph API returned MCP error:`, email);
       return email;
     }
 
     // Safety check - ensure we have a valid email object
     if (!email || typeof email !== 'object') {
-      console.error(`DEBUG getEmailTool: Invalid email response:`, typeof email, email);
+      debug(`DEBUG getEmailTool: Invalid email response:`, typeof email, email);
       return createValidationError('response', 'Invalid email data received from Microsoft Graph API');
     }
 
     // Log the structure of the email object for debugging
-    console.error(`DEBUG getEmailTool: Email object keys:`, Object.keys(email || {}));
-    console.error(`DEBUG getEmailTool: Email object type:`, typeof email, 'isArray:', Array.isArray(email));
+    debug(`DEBUG getEmailTool: Email object keys:`, Object.keys(email || {}));
+    debug(`DEBUG getEmailTool: Email object type:`, typeof email, 'isArray:', Array.isArray(email));
 
     const emailData = {
       id: email.id,
@@ -167,15 +168,15 @@ export async function getEmailTool(authManager, args) {
       emailData.body.content = processedContent;
     }
 
-    console.error(`DEBUG getEmailTool: Built emailData structure, returning response`);
+    debug(`DEBUG getEmailTool: Built emailData structure, returning response`);
 
     // Use safe response creation to prevent JSON serialization crashes
     const response = createSafeResponse(emailData);
 
-    console.error(`DEBUG getEmailTool: Final response length: ${response.content[0].text.length} chars`);
+    debug(`DEBUG getEmailTool: Final response length: ${response.content[0].text.length} chars`);
     return response;
   } catch (error) {
-    console.error(`DEBUG getEmailTool: Caught error:`, error);
+    debug(`DEBUG getEmailTool: Caught error:`, error);
     return convertErrorToToolError(error, 'Failed to get email');
   }
 }

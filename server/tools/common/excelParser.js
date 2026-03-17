@@ -1,9 +1,10 @@
 import { Buffer } from 'buffer';
 import * as XLSX from 'xlsx';
+import { debug } from '../../utils/logger.js';
 
 export function parseExcelContent(contentBytes, filename, maxSheets = 10, maxRowsPerSheet = 1000) {
   try {
-    console.error(`Debug: Parsing Excel file: ${filename}`);
+    debug(`Debug: Parsing Excel file: ${filename}`);
 
     // Decode Base64 to buffer
     const buffer = Buffer.from(contentBytes, 'base64');
@@ -25,7 +26,7 @@ export function parseExcelContent(contentBytes, filename, maxSheets = 10, maxRow
     const sheetsToProcess = workbook.SheetNames.slice(0, maxSheets);
 
     for (const sheetName of sheetsToProcess) {
-      console.error(`Debug: Processing sheet: ${sheetName}`);
+      debug(`Debug: Processing sheet: ${sheetName}`);
 
       const worksheet = workbook.Sheets[sheetName];
 
@@ -63,11 +64,11 @@ export function parseExcelContent(contentBytes, filename, maxSheets = 10, maxRow
       result.summary.note = `Only first ${maxSheets} sheets displayed (total: ${workbook.SheetNames.length})`;
     }
 
-    console.error(`Debug: Successfully parsed Excel file with ${result.sheets.length} sheets`);
+    debug(`Debug: Successfully parsed Excel file with ${result.sheets.length} sheets`);
     return result;
 
   } catch (error) {
-    console.error(`Debug: Excel parsing failed: ${error.message}`);
+    debug(`Debug: Excel parsing failed: ${error.message}`);
     return {
       type: 'excel_error',
       error: `Failed to parse Excel file: ${error.message}`,

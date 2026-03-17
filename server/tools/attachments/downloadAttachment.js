@@ -1,3 +1,4 @@
+import { debug } from '../../utils/logger.js';
 import { convertErrorToToolError, createValidationError } from '../../utils/mcpErrorResponse.js';
 import { handleLargeContent, saveBase64File } from '../../utils/fileOutput.js';
 import { safeStringify, createSafeResponse } from '../../utils/jsonUtils.js';
@@ -19,14 +20,14 @@ export async function downloadAttachmentTool(authManager, args) {
     await authManager.ensureAuthenticated();
     const graphApiClient = authManager.getGraphApiClient();
 
-    console.error(`Debug: Downloading attachment ${attachmentId} from message ${messageId}`);
+    debug(`Debug: Downloading attachment ${attachmentId} from message ${messageId}`);
 
     // First, get attachment metadata and type
     const attachment = await graphApiClient.makeRequest(`/me/messages/${messageId}/attachments/${attachmentId}`, {
       select: 'id,name,contentType,size,isInline,lastModifiedDateTime,@odata.type'
     });
 
-    console.error(`Debug: Attachment type: ${attachment['@odata.type']}, size: ${attachment.size}, contentType: "${attachment.contentType}"`);
+    debug(`Debug: Attachment type: ${attachment['@odata.type']}, size: ${attachment.size}, contentType: "${attachment.contentType}"`);
 
     const attachmentInfo = {
       id: attachment.id,
@@ -41,7 +42,7 @@ export async function downloadAttachmentTool(authManager, args) {
 
     if (includeContent) {
       try {
-        console.error('Debug: Attempting to download attachment content...');
+        debug('Debug: Attempting to download attachment content...');
         
         // Try different approaches based on attachment type
         if (attachment['@odata.type'] === '#microsoft.graph.fileAttachment') {
@@ -79,14 +80,14 @@ export async function downloadAttachmentTool(authManager, args) {
                 attachmentInfo.decodingError = decodedContent.error;
               }
               
-              console.error(`Debug: Successfully downloaded and decoded content (type: ${decodedContent.type}, size: ${decodedContent.size} bytes)`);
+              debug(`Debug: Successfully downloaded and decoded content (type: ${decodedContent.type}, size: ${decodedContent.size} bytes)`);
             } else {
               // Return raw Base64 content
               attachmentInfo.contentBytes = fullAttachment.contentBytes;
               attachmentInfo.contentIncluded = true;
               attachmentInfo.encoding = 'base64';
               attachmentInfo.note = 'Raw Base64 content (set decodeContent: true to decode)';
-              console.error(`Debug: Successfully downloaded raw content (${fullAttachment.contentBytes.length} Base64 characters)`);
+              debug(`Debug: Successfully downloaded raw content (${fullAttachment.contentBytes.length} Base64 characters)`);
             }
           } else {
             attachmentInfo.contentIncluded = false;
@@ -103,7 +104,7 @@ export async function downloadAttachmentTool(authManager, args) {
             attachmentInfo.itemContent = fullAttachment.item;
             attachmentInfo.contentIncluded = true;
             attachmentInfo.encoding = 'json';
-            console.error('Debug: Successfully downloaded item attachment content');
+            debug('Debug: Successfully downloaded item attachment content');
           } else {
             attachmentInfo.contentIncluded = false;
             attachmentInfo.contentError = 'No item content available for item attachment';
@@ -121,11 +122,11 @@ export async function downloadAttachmentTool(authManager, args) {
           attachmentInfo.isFolder = fullAttachment.isFolder;
           attachmentInfo.contentIncluded = false;
           attachmentInfo.contentError = 'Reference attachment - use sourceUrl to access the linked resource';
-          console.error('Debug: Reference attachment processed, sourceUrl:', fullAttachment.sourceUrl);
+          debug('Debug: Reference attachment processed, sourceUrl:', fullAttachment.sourceUrl);
           
         } else {
           // Unknown attachment type - try the standard approach
-          console.error('Debug: Unknown attachment type, trying standard contentBytes approach');
+          debug('Debug: Unknown attachment type, trying standard contentBytes approach');
           const fullAttachment = await graphApiClient.makeRequest(`/me/messages/${messageId}/attachments/${attachmentId}`);
           
           if (fullAttachment.contentBytes) {
@@ -167,7 +168,7 @@ export async function downloadAttachmentTool(authManager, args) {
         }
         
       } catch (contentError) {
-        console.error('Debug: Error downloading attachment content:', contentError);
+        debug('Debug: Error downloading attachment content:', contentError);
         attachmentInfo.contentIncluded = false;
         attachmentInfo.contentError = `Failed to download content: ${contentError.message}`;
         attachmentInfo.errorDetails = {
@@ -267,7 +268,7 @@ export async function downloadAttachmentTool(authManager, args) {
       ],
     };
   } catch (error) {
-    console.error('Debug: Error in downloadAttachmentTool:', error);
+    debug('Debug: Error in downloadAttachmentTool:', error);
     return convertErrorToToolError(error, 'Failed to download attachment');
   }
 }

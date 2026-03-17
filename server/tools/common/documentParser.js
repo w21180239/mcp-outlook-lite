@@ -1,9 +1,10 @@
 import { Buffer } from 'buffer';
 import officeParser from 'officeparser';
+import { debug } from '../../utils/logger.js';
 
 export function parseOfficeDocument(contentBytes, filename, maxTextLength = 50000) {
   try {
-    console.error(`Debug: Parsing office document: ${filename}`);
+    debug(`Debug: Parsing office document: ${filename}`);
 
     // Decode Base64 to buffer
     const buffer = Buffer.from(contentBytes, 'base64');
@@ -13,7 +14,7 @@ export function parseOfficeDocument(contentBytes, filename, maxTextLength = 5000
     return new Promise((resolve) => {
       officeParser.parseOffice(buffer, (data, err) => {
         if (err) {
-          console.error(`Debug: Office parsing failed: ${err}`);
+          debug(`Debug: Office parsing failed: ${err}`);
           resolve({
             type: 'office_error',
             error: `Failed to parse office document: ${err}`,
@@ -45,13 +46,13 @@ export function parseOfficeDocument(contentBytes, filename, maxTextLength = 5000
           }
         };
 
-        console.error(`Debug: Successfully parsed office document with ${textLength} characters of text`);
+        debug(`Debug: Successfully parsed office document with ${textLength} characters of text`);
         resolve(result);
       });
     });
 
   } catch (error) {
-    console.error(`Debug: Office parsing failed: ${error.message}`);
+    debug(`Debug: Office parsing failed: ${error.message}`);
     return Promise.resolve({
       type: 'office_error',
       error: `Failed to parse office document: ${error.message}`,

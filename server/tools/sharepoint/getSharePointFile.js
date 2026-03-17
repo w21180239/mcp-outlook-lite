@@ -5,6 +5,7 @@
  * Handles various SharePoint URL formats and sharing links.
  */
 
+import { debug } from '../../utils/logger.js';
 import { convertErrorToToolError, createValidationError, createToolError } from '../../utils/mcpErrorResponse.js';
 import { handleLargeContent, saveBase64File } from '../../utils/fileOutput.js';
 import { safeStringify, createSafeResponse } from '../../utils/jsonUtils.js';
@@ -17,14 +18,14 @@ import { decodeContent } from '../common/fileTypeUtils.js';
  */
 function parseSharePointUrl(sharePointUrl) {
   try {
-    console.error(`Debug: Parsing SharePoint URL: ${sharePointUrl}`);
+    debug(`Debug: Parsing SharePoint URL: ${sharePointUrl}`);
     const url = new URL(sharePointUrl);
     const hostname = url.hostname.toLowerCase();
     const pathname = url.pathname;
     const searchParams = Object.fromEntries(url.searchParams);
 
-    console.error(`Debug: URL components - hostname: ${hostname}, pathname: ${pathname}`);
-    console.error(`Debug: Search params:`, searchParams);
+    debug(`Debug: URL components - hostname: ${hostname}, pathname: ${pathname}`);
+    debug(`Debug: Search params:`, searchParams);
 
     // Check if it's a SharePoint domain
     if (!hostname.includes('sharepoint.com')) {
@@ -37,7 +38,7 @@ function parseSharePointUrl(sharePointUrl) {
 
     if (sharingMatch) {
       const [, docType, accessType, resourcePath] = sharingMatch;
-      console.error(`Debug: Detected sharing link - docType: ${docType}, accessType: ${accessType}, resourcePath: ${resourcePath}`);
+      debug(`Debug: Detected sharing link - docType: ${docType}, accessType: ${accessType}, resourcePath: ${resourcePath}`);
 
       return {
         type: 'sharing_link',
@@ -56,7 +57,7 @@ function parseSharePointUrl(sharePointUrl) {
     if (pathname.includes('/personal/')) {
       const personalMatch = pathname.match(/\/personal\/([^\/]+)/);
       if (personalMatch) {
-        console.error(`Debug: Detected OneDrive personal folder: ${personalMatch[1]}`);
+        debug(`Debug: Detected OneDrive personal folder: ${personalMatch[1]}`);
         return {
           type: 'onedrive_personal',
           hostname,
@@ -71,7 +72,7 @@ function parseSharePointUrl(sharePointUrl) {
     if (pathname.includes('/sites/')) {
       const siteMatch = pathname.match(/\/sites\/([^\/]+)/);
       if (siteMatch) {
-        console.error(`Debug: Detected team site: ${siteMatch[1]}`);
+        debug(`Debug: Detected team site: ${siteMatch[1]}`);
         return {
           type: 'team_site',
           hostname,
@@ -85,7 +86,7 @@ function parseSharePointUrl(sharePointUrl) {
     // Pattern 4: Check for any sharing parameters
     const hasShareParams = searchParams.d || searchParams.e || searchParams.share || searchParams.guestaccess;
     if (hasShareParams) {
-      console.error(`Debug: Detected sharing parameters`);
+      debug(`Debug: Detected sharing parameters`);
       return {
         type: 'sharing_with_params',
         hostname,
@@ -96,7 +97,7 @@ function parseSharePointUrl(sharePointUrl) {
     }
 
     // Fallback: Generic SharePoint URL
-    console.error(`Debug: Falling back to generic SharePoint URL`);
+    debug(`Debug: Falling back to generic SharePoint URL`);
     return {
       type: 'generic_sharepoint',
       hostname,
@@ -105,7 +106,7 @@ function parseSharePointUrl(sharePointUrl) {
     };
 
   } catch (error) {
-    console.error(`Debug: URL parsing failed: ${error.message}`);
+    debug(`Debug: URL parsing failed: ${error.message}`);
     throw new Error(`Invalid SharePoint URL: ${error.message}`);
   }
 }
@@ -121,7 +122,7 @@ async function resolveSharedFile(graphClient, sharingUrl, urlInfo) {
   const strategies = [
     // Strategy 1: Direct Graph API shares endpoint
     async () => {
-      console.error(`Debug: Trying Graph API shares endpoint`);
+      debug(`Debug: Trying Graph API shares endpoint`);
       const encodedUrl = Buffer.from(sharingUrl).toString('base64')
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
@@ -134,12 +135,12 @@ async function resolveSharedFile(graphClient, sharingUrl, urlInfo) {
 
     // Strategy 2: Try to extract drive and item info from URL structure
     async () => {
-      console.error(`Debug: Trying URL structure parsing`);
+      debug(`Debug: Trying URL structure parsing`);
       if ((urlInfo.type === 'sharing_link' || urlInfo.type === 'sharing_with_params') && urlInfo.searchParams.d) {
         // The 'd' parameter in SharePoint URLs is typically a shortened reference
         // Let's try different approaches to extract useful information
         const dParam = decodeURIComponent(urlInfo.searchParams.d);
-        console.error(`Debug: Found 'd' parameter: ${dParam}`);
+        debug(`Debug: Found 'd' parameter: ${dParam}`);
 
         // Strategy 2a: Try to use the 'd' parameter as a sharing token with Graph API
         try {
@@ -150,17 +151,17 @@ async function resolveSharedFile(graphClient, sharingUrl, urlInfo) {
             .replace(/\//g, '_')
             .replace(/=/g, '');
 
-          console.error(`Debug: Trying 'd' parameter as sharing token`);
+          debug(`Debug: Trying 'd' parameter as sharing token`);
           const result = await graphClient.makeRequest(`/shares/u!${encodedSharingUrl}/driveItem`, {
             select: 'id,name,size,createdDateTime,lastModifiedDateTime,webUrl,file,folder,@microsoft.graph.downloadUrl,parentReference'
           });
 
           if (result && result.id) {
-            console.error(`Debug: Successfully resolved using 'd' parameter as sharing token`);
+            debug(`Debug: Successfully resolved using 'd' parameter as sharing token`);
             return result;
           }
         } catch (sharingTokenError) {
-          console.error(`Debug: 'd' parameter as sharing token failed: ${sharingTokenError.message}`);
+          debug(`Debug: 'd' parameter as sharing token failed: ${sharingTokenError.message}`);
         }
 
         // Strategy 2b: Try to extract file ID patterns from 'd' parameter
@@ -174,7 +175,7 @@ async function resolveSharedFile(graphClient, sharingUrl, urlInfo) {
           const matches = dParam.match(pattern);
           if (matches) {
             for (const potentialFileId of matches) {
-              console.error(`Debug: Trying potential file ID: ${potentialFileId}`);
+              debug(`Debug: Trying potential file ID: ${potentialFileId}`);
 
               // Try different drive contexts
               const driveContexts = ['me', 'root'];
@@ -184,10 +185,10 @@ async function resolveSharedFile(graphClient, sharingUrl, urlInfo) {
                   const result = await graphClient.makeRequest(`/drives/${driveContext}/items/${potentialFileId}`, {
                     select: 'id,name,size,createdDateTime,lastModifiedDateTime,webUrl,file,folder,@microsoft.graph.downloadUrl,parentReference'
                   });
-                  console.error(`Debug: Successfully found file with ID ${potentialFileId} in drive context: ${driveContext}`);
+                  debug(`Debug: Successfully found file with ID ${potentialFileId} in drive context: ${driveContext}`);
                   return result;
                 } catch (driveError) {
-                  console.error(`Debug: Drive context ${driveContext} with ID ${potentialFileId} failed: ${driveError.message}`);
+                  debug(`Debug: Drive context ${driveContext} with ID ${potentialFileId} failed: ${driveError.message}`);
                 }
               }
             }
@@ -199,7 +200,7 @@ async function resolveSharedFile(graphClient, sharingUrl, urlInfo) {
 
     // Strategy 3: Try SharePoint REST API endpoint construction
     async () => {
-      console.error(`Debug: Trying SharePoint REST API approach`);
+      debug(`Debug: Trying SharePoint REST API approach`);
       if (urlInfo.type === 'sharing_link' || urlInfo.type === 'sharing_with_params') {
         // Extract site collection and construct direct API call
         const siteUrl = `https://${urlInfo.hostname}`;
@@ -210,7 +211,7 @@ async function resolveSharedFile(graphClient, sharingUrl, urlInfo) {
         });
 
         if (siteResponse && siteResponse.id) {
-          console.error(`Debug: Found site ID: ${siteResponse.id}`);
+          debug(`Debug: Found site ID: ${siteResponse.id}`);
           // This would require additional parsing to get to the specific file
           // For now, return site info as fallback
           return {
@@ -232,14 +233,14 @@ async function resolveSharedFile(graphClient, sharingUrl, urlInfo) {
   // Try each strategy in sequence
   for (const [index, strategy] of strategies.entries()) {
     try {
-      console.error(`Debug: Attempting resolution strategy ${index + 1}`);
+      debug(`Debug: Attempting resolution strategy ${index + 1}`);
       const result = await strategy();
       if (result && result.id) {
-        console.error(`Debug: Strategy ${index + 1} succeeded`);
+        debug(`Debug: Strategy ${index + 1} succeeded`);
         return result;
       }
     } catch (error) {
-      console.error(`Debug: Strategy ${index + 1} failed: ${error.message}`);
+      debug(`Debug: Strategy ${index + 1} failed: ${error.message}`);
       lastError = error;
     }
   }
@@ -364,7 +365,7 @@ export async function getSharePointFileTool(authManager, args) {
         console.error('Debug: Detected standard SharePoint sharing URL from email, attempting resolution');
         try {
           fileResult = await resolveSharedFile(graphApiClient, args.sharePointUrl, urlInfo);
-          console.error(`Debug: Successfully resolved file: ${fileResult.name}`);
+          debug(`Debug: Successfully resolved file: ${fileResult.name}`);
 
           // Handle content download if requested
           if (args.downloadContent && !fileResult.folder) {
@@ -390,7 +391,7 @@ export async function getSharePointFileTool(authManager, args) {
                 }
 
                 const actualDownloadUrl = fileResult['@microsoft.graph.downloadUrl'];
-                console.error(`Debug: Using download URL: ${actualDownloadUrl ? 'URL available' : 'URL missing'}`);
+                debug(`Debug: Using download URL: ${actualDownloadUrl ? 'URL available' : 'URL missing'}`);
 
                 if (actualDownloadUrl) {
                   const contentResponse = await fetch(actualDownloadUrl);
@@ -424,7 +425,7 @@ export async function getSharePointFileTool(authManager, args) {
                       fileResult.decodingError = decodedContent.error;
                     }
 
-                    console.error(`Debug: Successfully downloaded and decoded content (type: ${decodedContent.type}, size: ${decodedContent.size} bytes)`);
+                    debug(`Debug: Successfully downloaded and decoded content (type: ${decodedContent.type}, size: ${decodedContent.size} bytes)`);
                   } else {
                     fileResult.contentError = `Failed to download content: HTTP ${contentResponse.status} ${contentResponse.statusText}`;
                   }
@@ -432,13 +433,13 @@ export async function getSharePointFileTool(authManager, args) {
                   fileResult.contentError = 'No download URL available for content download';
                 }
               } catch (downloadError) {
-                console.error(`Debug: Content download failed: ${downloadError.message}`);
+                debug(`Debug: Content download failed: ${downloadError.message}`);
                 fileResult.contentError = `Failed to download content: ${downloadError.message}`;
               }
             }
           }
         } catch (resolveError) {
-          console.error(`Debug: Resolution failed: ${resolveError.message}`);
+          debug(`Debug: Resolution failed: ${resolveError.message}`);
           return createToolError(
             `Failed to resolve SharePoint sharing link: ${resolveError.message}`,
             'RESOLUTION_FAILED',

@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer';
+import { debug } from '../../utils/logger.js';
 import { parseExcelContent } from './excelParser.js';
 import { parseOfficeDocument } from './documentParser.js';
 export { parseExcelContent } from './excelParser.js';
@@ -20,7 +21,7 @@ export function formatFileSize(bytes) {
 }
 
 export function isTextContent(contentType, filename, contentBytes = null) {
-  console.error(`Debug: isTextContent check - contentType: "${contentType}", filename: "${filename}"`);
+  debug(`Debug: isTextContent check - contentType: "${contentType}", filename: "${filename}"`);
 
   const textTypes = [
     'text/',
@@ -44,7 +45,7 @@ export function isTextContent(contentType, filename, contentBytes = null) {
   if (contentType) {
     const lowerContentType = contentType.toLowerCase();
     if (textTypes.some(type => lowerContentType.startsWith(type))) {
-      console.error(`Debug: Detected as text by contentType: ${contentType}`);
+      debug(`Debug: Detected as text by contentType: ${contentType}`);
       return true;
     }
   }
@@ -53,7 +54,7 @@ export function isTextContent(contentType, filename, contentBytes = null) {
   if (filename) {
     const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
     if (textExtensions.includes(ext)) {
-      console.error(`Debug: Detected as text by extension: ${ext}`);
+      debug(`Debug: Detected as text by extension: ${ext}`);
       return true;
     }
   }
@@ -67,15 +68,15 @@ export function isTextContent(contentType, filename, contentBytes = null) {
           sampleContent.includes('<?xml') ||
           sampleContent.startsWith('{') ||
           sampleContent.startsWith('[')) {
-        console.error(`Debug: Detected as text by content analysis`);
+        debug(`Debug: Detected as text by content analysis`);
         return true;
       }
     } catch (error) {
-      console.error(`Debug: Content analysis failed: ${error.message}`);
+      debug(`Debug: Content analysis failed: ${error.message}`);
     }
   }
 
-  console.error(`Debug: Detected as binary`);
+  debug(`Debug: Detected as binary`);
   return false;
 }
 
@@ -163,7 +164,7 @@ export async function decodeContent(contentBytes, contentType, filename, maxText
     const buffer = Buffer.from(contentBytes, 'base64');
     const decodedSize = buffer.length;
 
-    console.error(`Debug: decodeContent - size: ${decodedSize}, contentType: "${contentType}", filename: "${filename}"`);
+    debug(`Debug: decodeContent - size: ${decodedSize}, contentType: "${contentType}", filename: "${filename}"`);
 
     if (isTextContent(contentType, filename, contentBytes)) {
       if (decodedSize <= maxTextSize) {
@@ -186,7 +187,7 @@ export async function decodeContent(contentBytes, contentType, filename, maxText
         };
       }
     } else if (isExcelFile(contentType, filename)) {
-      console.error(`Debug: Detected Excel file, attempting to parse`);
+      debug(`Debug: Detected Excel file, attempting to parse`);
       const excelData = parseExcelContent(contentBytes, filename);
       return {
         type: 'excel',
@@ -198,7 +199,7 @@ export async function decodeContent(contentBytes, contentType, filename, maxText
         note: 'Excel file parsed and data extracted. Use contentBytes for raw file access.'
       };
     } else if (isOfficeDocument(contentType, filename)) {
-      console.error(`Debug: Detected office document, attempting to parse`);
+      debug(`Debug: Detected office document, attempting to parse`);
       const officeData = await parseOfficeDocument(contentBytes, filename);
       return {
         type: 'office',
