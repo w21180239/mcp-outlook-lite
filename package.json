@@ -19,7 +19,6 @@
   "author": "XenoXilus <xenoxilus@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@azure/identity": "^4.10.2",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@modelcontextprotocol/sdk": "^1.15.0",
     "dotenv": "^17.1.0",
@@ -33,6 +32,7 @@
   },
   "description": "Microsoft Outlook MCP server for Claude Desktop",
   "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
     "vitest": "^3.2.4"
   }
 }
