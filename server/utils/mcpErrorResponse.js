@@ -81,7 +81,6 @@ export function convertErrorToToolError(error, context = '') {
 
   const details = {
     name: error?.name || 'Error',
-    stack: error?.stack?.split('\n')[0] // First line only for brevity
   };
 
   // Preserve common error properties
