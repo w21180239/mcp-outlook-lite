@@ -1,7 +1,7 @@
 # Outlook-MCP Moderate Refactor
 
 **Date:** 2026-03-17
-**Author:** Wei Liu
+**Author:** w21180239
 **Status:** Approved
 
 ## Context
