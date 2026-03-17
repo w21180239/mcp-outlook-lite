@@ -1,14 +1,18 @@
 # Microsoft Outlook MCP Server
 
-A Model Context Protocol (MCP) server that enables AI assistants to interact with Microsoft Outlook email and calendar through the Microsoft Graph API.
+> **Fork notice:** This is an actively maintained fork of [XenoXilus/outlook-mcp](https://github.com/XenoXilus/outlook-mcp). The original repo has been inactive since January 2025. This fork adds silent token refresh, inbox rules management, reply-thread drafts, and various bug fixes.
 
-[![Download Latest Release](https://img.shields.io/github/v/release/XenoXilus/outlook-mcp?label=Download&color=blue)](https://github.com/XenoXilus/outlook-mcp/releases/latest)
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5f5f?logo=ko-fi)](https://ko-fi.com/xenoxilus)
+An MCP server for Microsoft Outlook — email, calendar, and SharePoint — via the Microsoft Graph API.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Features
 
 - **Email Operations**: Read, search, send, reply to emails and download attachments
-- **SharePoint Integration**: Access SharePoint files via sharing links or direct file IDs. Download files shared to you via emails. 
+- **Inbox Rules**: Create and manage server-side inbox rules (auto-move, auto-categorize, etc.)
+- **Reply Thread Drafts**: Create drafts that preserve the conversation thread via `replyToMessageId`
+- **Silent Token Refresh**: Expired access tokens are refreshed automatically — no browser re-login between sessions
+- **SharePoint Integration**: Access SharePoint files via sharing links or direct file IDs
 - **Calendar Management**: View and manage calendar events and appointments
 - **Office Document Processing**: Parse PDF, Word, PowerPoint, and Excel files with extracted text content
 - **Large File Support**: Automatic handling of files that exceed MCP response size limits
