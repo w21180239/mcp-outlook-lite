@@ -43,9 +43,9 @@ describe('replyToEmailTool', () => {
     });
 
     expect(result.isError).toBeUndefined();
-    expect(result.content[0].text).toContain('Reply created successfully');
+    expect(result.content[0].text).toContain('Reply draft created successfully');
     expect(graphApiClient.postWithRetry).toHaveBeenCalledWith(
-      '/me/messages/msg-1/reply',
+      '/me/messages/msg-1/createReply',
       expect.objectContaining({
         message: expect.objectContaining({
           body: expect.objectContaining({
@@ -66,7 +66,7 @@ describe('replyToEmailTool', () => {
     });
 
     expect(result.isError).toBeUndefined();
-    expect(result.content[0].text).toContain('Reply created successfully');
+    expect(result.content[0].text).toContain('Reply draft created successfully');
   });
 
   it('should not apply styling when preserveUserStyling is false', async () => {
@@ -84,7 +84,7 @@ describe('replyToEmailTool', () => {
     expect(applyUserStyling).not.toHaveBeenCalled();
     expect(result.isError).toBeUndefined();
     expect(graphApiClient.postWithRetry).toHaveBeenCalledWith(
-      '/me/messages/msg-1/reply',
+      '/me/messages/msg-1/createReply',
       expect.objectContaining({
         message: expect.objectContaining({
           body: expect.objectContaining({
@@ -145,9 +145,9 @@ describe('replyAllTool', () => {
     });
 
     expect(result.isError).toBeUndefined();
-    expect(result.content[0].text).toContain('Reply all created successfully');
+    expect(result.content[0].text).toContain('Reply-all draft created successfully');
     expect(graphApiClient.postWithRetry).toHaveBeenCalledWith(
-      '/me/messages/msg-1/replyAll',
+      '/me/messages/msg-1/createReplyAll',
       expect.any(Object)
     );
   });
