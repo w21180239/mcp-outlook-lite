@@ -228,6 +228,20 @@ Report vulnerabilities via [GitHub private reporting](https://github.com/w211802
 
 ---
 
+## See Also
+
+**[outlook-cli-skill](https://github.com/w21180239/outlook-cli-skill)** — Lightweight alternative by the same author. No MCP server needed — a thin CLI handles OAuth, and AI agents call Microsoft Graph API directly via skill files. Works with any AI agent (Claude Code, Cursor, Codex, Gemini), not just MCP clients.
+
+| | mcp-outlook-lite | outlook-cli-skill |
+|---|---|---|
+| **Approach** | MCP server (46 tools) | CLI + skill files (26 ops) |
+| **Scope** | Full Outlook (email, calendar, SharePoint, attachments) | Email-focused |
+| **Best for** | MCP clients needing calendar + document parsing | Any AI agent, minimal overhead |
+| **Runtime** | Long-running server process | No server, on-demand CLI calls |
+| **Attachment parsing** | Auto-parse PDF/Word/Excel/PPT | Raw download |
+
+---
+
 ## License
 
 [MIT](LICENSE)
