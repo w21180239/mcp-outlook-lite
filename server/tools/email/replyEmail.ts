@@ -40,13 +40,13 @@ export async function replyToEmailTool(authManager: any, args: Record<string, an
       }
     }
 
-    const result = await graphApiClient.postWithRetry(`/me/messages/${messageId}/reply`, replyPayload);
+    const draft = await graphApiClient.postWithRetry(`/me/messages/${messageId}/createReply`, replyPayload);
 
     return {
       content: [
         {
           type: 'text',
-          text: `Reply created successfully. Reply ID: ${result.id || 'N/A'}`,
+          text: `Reply draft created successfully (NOT sent). Draft ID: ${draft.id || 'N/A'}. Open Outlook to review and send.`,
         },
       ],
     };
@@ -94,13 +94,13 @@ export async function replyAllTool(authManager: any, args: Record<string, any>) 
       }
     }
 
-    const result = await graphApiClient.postWithRetry(`/me/messages/${messageId}/replyAll`, replyPayload);
+    const draft = await graphApiClient.postWithRetry(`/me/messages/${messageId}/createReplyAll`, replyPayload);
 
     return {
       content: [
         {
           type: 'text',
-          text: `Reply all created successfully. Reply ID: ${result.id || 'N/A'}`,
+          text: `Reply-all draft created successfully (NOT sent). Draft ID: ${draft.id || 'N/A'}. Open Outlook to review and send.`,
         },
       ],
     };
