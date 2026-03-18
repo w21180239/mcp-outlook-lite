@@ -58,9 +58,10 @@ Or add to your MCP client config:
 <summary><b>Claude Code</b></summary>
 
 ```bash
-claude mcp add outlook -- npx mcp-outlook-lite \
-  --env AZURE_CLIENT_ID=your-client-id \
-  --env AZURE_TENANT_ID=your-tenant-id
+claude mcp add outlook \
+  -e AZURE_CLIENT_ID=your-client-id \
+  -e AZURE_TENANT_ID=your-tenant-id \
+  -- npx mcp-outlook-lite
 ```
 </details>
 
