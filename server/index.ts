@@ -37,7 +37,15 @@ process.on('uncaughtException', (error) => {
 
     if (!process.env.AZURE_CLIENT_ID || !process.env.AZURE_TENANT_ID) {
       console.error('Error: AZURE_CLIENT_ID and AZURE_TENANT_ID environment variables are required.');
+      console.error('Hint: For personal accounts (outlook.com/hotmail.com), set AZURE_TENANT_ID=consumers');
       process.exit(1);
+    }
+
+    const tenantId = process.env.AZURE_TENANT_ID;
+    if (tenantId !== 'consumers' && tenantId !== 'common' && tenantId !== 'organizations') {
+      console.error(`Note: AZURE_TENANT_ID is set to a specific tenant ID (${tenantId}).`);
+      console.error('If you are using a personal Microsoft account (outlook.com/hotmail.com/live.com),');
+      console.error('set AZURE_TENANT_ID=consumers instead — otherwise Graph API calls will return 401.');
     }
 
     const server = new Server(

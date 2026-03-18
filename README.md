@@ -42,9 +42,15 @@ The lightest way to connect AI agents to Microsoft Outlook. No client secret. No
    Mail.Read  Mail.ReadWrite  Mail.Send  Calendars.Read  Calendars.ReadWrite
    User.Read  MailboxSettings.Read  Files.Read.All  Sites.Read.All  offline_access
    ```
-6. Copy **Application (client) ID** and **Directory (tenant) ID** from the Overview page
+6. Copy **Application (client) ID** from the Overview page
+7. Determine your **Tenant ID**:
+   - **Personal account** (outlook.com / hotmail.com / live.com): use `consumers`
+   - **Work/school account**: use the **Directory (tenant) ID** from the Overview page
+   - **Both**: use `common`
 
 > That's it. No client secret. No certificates. No admin consent (for personal accounts).
+>
+> ⚠️ **Personal account users**: You **must** set `AZURE_TENANT_ID=consumers`. Using the Directory (tenant) ID from Azure Portal will authenticate successfully but Graph API calls will return 401 because your mailbox lives in the consumer identity system, not in that Azure AD tenant.
 
 ### Step 2: Install
 
@@ -58,9 +64,16 @@ Or add to your MCP client config:
 <summary><b>Claude Code</b></summary>
 
 ```bash
+# Personal account (outlook.com / hotmail.com / live.com)
 claude mcp add outlook \
   -e AZURE_CLIENT_ID=your-client-id \
-  -e AZURE_TENANT_ID=your-tenant-id \
+  -e AZURE_TENANT_ID=consumers \
+  -- npx mcp-outlook-lite
+
+# Work/school account
+claude mcp add outlook \
+  -e AZURE_CLIENT_ID=your-client-id \
+  -e AZURE_TENANT_ID=your-directory-tenant-id \
   -- npx mcp-outlook-lite
 ```
 </details>
@@ -76,12 +89,14 @@ claude mcp add outlook \
       "args": ["mcp-outlook-lite"],
       "env": {
         "AZURE_CLIENT_ID": "your-client-id",
-        "AZURE_TENANT_ID": "your-tenant-id"
+        "AZURE_TENANT_ID": "consumers"
       }
     }
   }
 }
 ```
+
+> Replace `consumers` with your Directory (tenant) ID for work/school accounts.
 </details>
 
 <details>
@@ -95,12 +110,14 @@ claude mcp add outlook \
       "args": ["mcp-outlook-lite"],
       "env": {
         "AZURE_CLIENT_ID": "your-client-id",
-        "AZURE_TENANT_ID": "your-tenant-id"
+        "AZURE_TENANT_ID": "consumers"
       }
     }
   }
 }
 ```
+
+> Replace `consumers` with your Directory (tenant) ID for work/school accounts.
 </details>
 
 ### Step 3: Use it
@@ -164,7 +181,7 @@ Agent calls a tool
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `AZURE_CLIENT_ID` | Yes | Application (client) ID from Azure |
-| `AZURE_TENANT_ID` | Yes | Directory (tenant) ID from Azure |
+| `AZURE_TENANT_ID` | Yes | `consumers` for personal accounts, Directory (tenant) ID for work/school, or `common` for both |
 | `MCP_OUTLOOK_DEVICE_CODE` | No | Set to `1` to force device code flow |
 | `MCP_OUTLOOK_WORK_DIR` | No | Directory for large file downloads |
 | `DEBUG` | No | Enable debug logging on stderr |

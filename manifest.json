@@ -16,7 +16,7 @@
     "azure_tenant_id": {
       "type": "string",
       "title": "Azure Tenant ID", 
-      "description": "Azure Active Directory tenant (directory) ID",
+      "description": "Use 'consumers' for personal accounts (outlook.com/hotmail.com), your Directory (tenant) ID for work/school accounts, or 'common' for both",
       "required": true
     },
     "download_directory": {
